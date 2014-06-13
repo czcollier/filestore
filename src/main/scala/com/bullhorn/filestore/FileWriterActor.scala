@@ -39,6 +39,7 @@ class FileWriterActor(store: FileStore) extends Actor with ActorLogging {
 
       println("done: " + fileSig)
       sender ! FileSignature(fileSig)
+      context.system.stop(self)
     }
   }
 }

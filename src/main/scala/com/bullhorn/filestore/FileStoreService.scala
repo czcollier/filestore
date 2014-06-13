@@ -27,9 +27,10 @@ object FileStoreService {
   //file name containing any characters optionally ending with dot and extension
   val filenameDispositionPattern = """filename=(.+?)(\.(.+))?$""".r
 
-  case class StoredFile(name: String, contentType: String, size: Long, signature: String)
+  case class StoredFile(name: String, contentType: String, size: Long, signature: FileSignature)
 
   object FileStoreJsonProtocol extends DefaultJsonProtocol {
+    implicit val fileSignatureFormat = jsonFormat1(FileSignature)
     implicit val storedFileFormat = jsonFormat4(StoredFile)
   }
 }
@@ -56,6 +57,7 @@ trait FileStoreService extends HttpService with SprayJsonSupport {
     put {
       respondWithMediaType(`application/json`) {
         entity(as[MultipartFormData]) { formData =>
+          detach() {
             val details = formData.fields.collect {
               case (BodyPart(entity, headers)) =>
                 for {
@@ -68,15 +70,16 @@ trait FileStoreService extends HttpService with SprayJsonSupport {
                     writer ! chunk
                   }
 
-                  (writer ? Done).collect {
-                    case FileSignature(v) => StoredFile(fileName.toString, contentType, entity.data.length, v)
-                  }
+                  (writer ? Done)
+                    .mapTo[FileSignature]
+                    .map(result => StoredFile(fileName.toString, contentType, entity.data.length, result))
                 }
             }
 
             complete {
-              Future.sequence(details.map(x => x.get))
+              Future.sequence(details.flatMap(x => x))
             }
+          }
         }
       }
     }

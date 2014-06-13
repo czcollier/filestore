@@ -10,8 +10,8 @@ object Boot extends App {
   implicit val system = ActorSystem("on-spray-can")
 
   // create and start our service actor
-  val service = system.actorOf(Props[FileStoreServiceActor], "filestore-service")
-
+  //val service = system.actorOf(Props[FileStoreServiceActor], "filestore-service")
+  val handler = system.actorOf(Props[FileStoreHandler], name = "filestore-handler")
   // start a new HTTP server on port 8080 with our service actor as the handler
-  IO(Http) ! Http.Bind(service, "0.0.0.0", port = 8080)
+  IO(Http) ! Http.Bind(handler, "0.0.0.0", port = 8080)
 }
