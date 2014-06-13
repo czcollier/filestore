@@ -30,6 +30,7 @@ object Build extends sbt.Build {
       ),
       libraryDependencies ++= Seq(
         Libraries.akkaActor,
+        Libraries.berkeleydb,
         Libraries.sprayCan,
         Libraries.sprayRouting,
         Libraries.sprayCaching,

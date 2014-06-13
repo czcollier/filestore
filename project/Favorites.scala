@@ -21,6 +21,7 @@ object Favorites {
 
   object Versions {
     val akka          = "2.2.3"
+    val berkeleydb    = "3.2.76"
     val casbah        = "2.4.1"
     val dispatch      = "0.9.2"
     val guava         = "14.0.1"
@@ -64,6 +65,8 @@ object Favorites {
 
     // RDBMS access
     val squeryl         = "org.squeryl"               %% "squeryl"             % Versions.squeryl       % "compile"
+
+    val berkeleydb      = "berkeleydb"                % "je"                   % Versions.berkeleydb    % "compile"
 
     // HTTP (async)
     val dispatch        = "net.databinder.dispatch"   %% "dispatch-core"       % Versions.dispatch      % "compile"

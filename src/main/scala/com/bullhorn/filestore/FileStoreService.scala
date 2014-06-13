@@ -1,15 +1,16 @@
 package com.bullhorn.filestore
 
-import java.io.{BufferedOutputStream, FileOutputStream}
-import java.security.MessageDigest
-
 import akka.actor._
+import akka.pattern.ask
+import com.bullhorn.filestore.FileWriterActor.{FileSignature, Done}
 import spray.http.MediaTypes._
 import spray.http._
 import spray.httpx.SprayJsonSupport
 import spray.json.DefaultJsonProtocol
 import spray.routing._
-
+import akka.util.Timeout
+import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.duration._
 
 
 class FileStoreServiceActor extends Actor with ActorLogging with FileStoreService {
@@ -22,7 +23,7 @@ class FileStoreServiceActor extends Actor with ActorLogging with FileStoreServic
 
 object FileStoreService {
   //size of chunks we will break HTTP entity into for processing
-  val chunkSize = 1024L
+  val chunkSize = 16384L
   //file name containing any characters optionally ending with dot and extension
   val filenameDispositionPattern = """filename=(.+?)(\.(.+))?$""".r
 
@@ -34,10 +35,19 @@ object FileStoreService {
 }
 
 trait FileStoreService extends HttpService with SprayJsonSupport {
-  import FileStoreService._
-  import FileStoreService.FileStoreJsonProtocol._
+  import com.bullhorn.filestore.FileStoreService._
+  import FileStoreJsonProtocol._
+
+  import ExecutionContext.Implicits.global
 
   def system: ActorSystem
+
+  val store: FileStore = new BDBStore
+  def createWriter(): ActorRef = {
+    actorRefFactory.actorOf(Props(new FileWriterActor(this.store)))
+  }
+
+  implicit val timeout = Timeout(5 seconds)
 
   val signatureRoute = path("file") {
     get {
@@ -46,46 +56,30 @@ trait FileStoreService extends HttpService with SprayJsonSupport {
     put {
       respondWithMediaType(`application/json`) {
         entity(as[MultipartFormData]) { formData =>
-          detach() {
-            complete {
-              val details = formData.fields.collect {
-                case (BodyPart(entity, headers)) =>
-
-                  for {
-                    contentType <- extractContentTypeHeader(headers)
-                    fileName <- extractFileName(headers)
+            val details = formData.fields.collect {
+              case (BodyPart(entity, headers)) =>
+                for {
+                  contentType <- extractContentTypeHeader(headers)
+                  fileName <- extractFileName(headers)
+                }
+                yield {
+                  val writer = createWriter
+                  entity.data.toChunkStream(chunkSize).foreach { chunk =>
+                    writer ! chunk
                   }
-                  yield {
-                    val signature = signatureAndSendToStore(entity, fileName)
-                    StoredFile(fileName.toString, contentType, entity.data.length, signature)
-                  }
-              }
 
-              details.collect { case Some(d) => d }
+                  (writer ? Done).collect {
+                    case FileSignature(v) => StoredFile(fileName.toString, contentType, entity.data.length, v)
+                  }
+                }
             }
-          }
+
+            complete {
+              Future.sequence(details.map(x => x.get))
+            }
         }
       }
     }
-  }
-
-  def signatureAndSendToStore(entity: HttpEntity, fileName: (String, Option[String])) = {
-
-    val digest = MessageDigest.getInstance("SHA-1")
-
-    val store: ActorRef = system.actorOf(Props[FileStoreActor])
-    store ! FileStoreActor.Start(fileName._2.getOrElse("unknown"))
-
-    entity.data.toChunkStream(chunkSize).foreach { chunk =>
-      digest.update(chunk.toByteArray)
-      store ! chunk
-    }
-
-    val fileSig = hexEncode(digest.digest)
-
-    store ! FileStoreActor.Done(fileSig)
-
-    fileSig
   }
 
   def extractContentTypeHeader(hdrs: Seq[HttpHeader]) = {
@@ -100,9 +94,6 @@ trait FileStoreService extends HttpService with SprayJsonSupport {
       fn <- filenameDispositionPattern.findFirstMatchIn(hdr.value)
     } yield (fn.group(1), Option(fn.group(3)))
   }
-
-  def hexEncode(bytes: Array[Byte]) =
-    bytes.map(0xFF & _).map { "%02x".format(_) }.foldLeft("") { _ + _ }
 }
 
 
