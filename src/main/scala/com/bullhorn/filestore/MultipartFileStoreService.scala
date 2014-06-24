@@ -2,6 +2,7 @@ package com.bullhorn.filestore
 
 import akka.actor._
 import akka.pattern.ask
+import com.bullhorn.filestore.Codec.StoredFile
 import com.bullhorn.filestore.FileWriterActor.{FileSignature, Done}
 import spray.http.MediaTypes._
 import spray.http._
@@ -13,39 +14,32 @@ import scala.concurrent.{Future, ExecutionContext}
 import scala.concurrent.duration._
 
 
-class FileStoreServiceActor extends Actor with ActorLogging with FileStoreService {
+class FileStoreServiceActor extends Actor with ActorLogging with MultipartFileStoreService {
   def actorRefFactory = context
-
   implicit def system = context.system
-
   override def receive = runRoute(signatureRoute)
 }
 
-object FileStoreService {
+object MultipartFileStoreService {
   //size of chunks we will break HTTP entity into for processing
   val chunkSize = 16384L
   //file name containing any characters optionally ending with dot and extension
   val filenameDispositionPattern = """filename=(.+?)(\.(.+))?$""".r
 
-  case class StoredFile(name: String, contentType: String, size: Long, signature: FileSignature)
-
-  object FileStoreJsonProtocol extends DefaultJsonProtocol {
-    implicit val fileSignatureFormat = jsonFormat1(FileSignature)
-    implicit val storedFileFormat = jsonFormat4(StoredFile)
-  }
 }
 
-trait FileStoreService extends HttpService with SprayJsonSupport {
-  import com.bullhorn.filestore.FileStoreService._
-  import FileStoreJsonProtocol._
+trait MultipartFileStoreService extends HttpService with SprayJsonSupport {
+  import com.bullhorn.filestore.MultipartFileStoreService._
+  import Codec.FileStoreJsonProtocol._
 
   import ExecutionContext.Implicits.global
 
   def system: ActorSystem
 
   val store: FileStore = new BDBStore
-  def createWriter(): ActorRef = {
-    actorRefFactory.actorOf(Props(new FileWriterActor(this.store)))
+
+  def createWriter(start: ChunkedRequestStart): ActorRef = {
+    actorRefFactory.actorOf(Props(new FileWriterActor(this.store, start)))
   }
 
   implicit val timeout = Timeout(5 seconds)
@@ -65,14 +59,15 @@ trait FileStoreService extends HttpService with SprayJsonSupport {
                   fileName <- extractFileName(headers)
                 }
                 yield {
-                  val writer = createWriter
-                  entity.data.toChunkStream(chunkSize).foreach { chunk =>
+                  val chunkStream = entity.data.toChunkStream(chunkSize)
+                  val writer = createWriter(chunkStream.head.asInstanceOf[ChunkedRequestStart])
+                  chunkStream.tail.foreach { chunk =>
                     writer ! chunk
                   }
-
+                  
                   (writer ? Done)
                     .mapTo[FileSignature]
-                    .map(result => StoredFile(fileName.toString, contentType, entity.data.length, result))
+                    .map(result => StoredFile(fileName.toString, contentType, false, entity.data.length, result))
                 }
             }
 

@@ -20,8 +20,13 @@ import spray.can.Http
  * MessageChunks and requires `AckConsumed` acknowledgements to manage the workers queue size.
  */
 class SuspendingQueue(client: ActorRef, worker: ActorRef) extends Actor with ActorLogging {
-  val LowWaterMark = 1024*1024*20
-  val HighWaterMark = 1024*1024*50
+  import SuspendingQueue._
+
+  val LowWaterMark = context.system.settings.config.getInt(
+    "com.bullhorn.filestore.suspendingQueue.suspendThreshold")
+
+  val HighWaterMark = context.system.settings.config.getInt(
+    "com.bullhorn.filestore.suspendingQueue.resumeThreshold")
 
   var unackedBytes = 0L
   var suspended = false
@@ -30,13 +35,19 @@ class SuspendingQueue(client: ActorRef, worker: ActorRef) extends Actor with Act
   client ! CommandWrapper(SetRequestTimeout(Duration.Inf)) // cancel timeout
 
   def receive = {
-    case part: HttpRequestPart => dispatch(part)
+    case part: HttpRequestPart => 
+      log.debug(s"queue received part: ${part}")
+      dispatch(part)
     case AckConsumed(bytes) =>
+      log.debug(s"queue received ack: ${bytes}")
       unackedBytes -= bytes
       require(unackedBytes >= 0)
       checkResume()
     case Terminated(worker) => context.stop(self)
-    case x => client ! x
+    case x => {
+      log.debug(s"queue received: ${x}")
+      client ! x
+    }
   }
 
   private def dispatch(part: HttpRequestPart): Unit = {
@@ -61,41 +72,6 @@ class SuspendingQueue(client: ActorRef, worker: ActorRef) extends Actor with Act
     case _ => 0
   }
 }
-case class AckConsumed(bytes: Long)
-
-class FileUploadHandler(start: ChunkedRequestStart) extends Actor with ActorLogging {
-  import start.request._
-
-  val dir = new File("/tmp")
-  dir.mkdirs()
-  val tmpFile = File.createTempFile("chunked-receiver", ".tmp", dir)
-  tmpFile.deleteOnExit()
-  val output = new BufferedOutputStream( new FileOutputStream(tmpFile))
-  val Some(HttpHeaders.`Content-Type`(ContentType(multipart: MultipartMediaType, _))) = header[HttpHeaders.`Content-Type`]
-  val boundary = multipart.parameters("boundary")
-
-  log.info(s"Got start of chunked request $method $uri with multipart boundary '$boundary' writing to $tmpFile")
-  var bytesWritten = 0L
-
-  def receive = {
-    case c: MessageChunk =>
-      log.info(s"Got ${c.data.length} bytes of chunked request $method $uri")
-      output.write(c.data.toByteArray)
-      bytesWritten += c.data.length
-      sender ! AckConsumed(c.data.length)
-
-    case e: ChunkedMessageEnd =>
-      log.info(s"Got end of chunked request $method $uri")
-      output.close()
-
-      sender ! HttpResponse(status = 200, entity = renderResult())
-      sender ! CommandWrapper(SetRequestTimeout(2.seconds)) // reset timeout to original value
-      //tmpFile.delete()
-      context.stop(self)
-  }
-
-  def renderResult(): HttpEntity = {
-    HttpEntity(`text/html`,
-      <html><body>OK</body></html>.toString)
-  }
+object SuspendingQueue {
+  case class AckConsumed(bytes: Long)
 }

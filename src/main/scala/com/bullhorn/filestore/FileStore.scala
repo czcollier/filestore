@@ -10,6 +10,7 @@ import com.sleepycat.je.{Environment, EnvironmentConfig, SequenceConfig}
 import com.sleepycat.persist.model.{SecondaryKey, Entity, PrimaryKey}
 import com.sleepycat.persist.{EntityStore, StoreConfig}
 import com.sleepycat.persist.model.Relationship.ONE_TO_ONE
+import com.typesafe.config.ConfigFactory
 import spray.http.HttpData
 
 object FileStore {
@@ -32,20 +33,21 @@ object FileStore {
 
 trait FileStore {
   def newTempFile: File
-  def finish(key: String, tmpFile: File)
+  def finish(key: String, tmpFile: File): Boolean
   def getByID(id: Long): FileRecord
   def getBySignature(sig: String): FileRecord
 }
 
 class BDBStore extends FileStore {
+  val config = ConfigFactory.load()
 
-  val baseDir = "/mnt/bigvol/filestore/store"
-  val tmpDir  = "/mnt/bigvol/filestore/temp"
+  val baseDir = config.getString("com.bullhorn.filestore.store.basedir")
+  val tmpDir = config.getString("com.bullhorn.filestore.store.tempdir")
 
   val envConfig = EnvironmentConfig.DEFAULT
   envConfig.setAllowCreate(true)
   envConfig.setTransactional(true)
-  val env = new Environment(new File("/mnt/bigvol/filestore/db"), envConfig)
+  val env = new Environment(new File("%s/db".format(baseDir)), envConfig)
 
   val storeConfig = StoreConfig.DEFAULT
   storeConfig.setAllowCreate(true)
@@ -71,7 +73,7 @@ class BDBStore extends FileStore {
   }
 
   def withTmpDir(fname: String) = "%s/%s".format(tmpDir, fname)
-  def IDToStorePath(id: Long) = "%s/%010d".format(baseDir, id)
+  def IDToStorePath(id: Long) = "%s/%s/%010d".format(baseDir, "files", id)
 
   def newTempFile: File = {
     val name = UUIDFromLong(tmpSequence.get(null, 1))
@@ -88,20 +90,24 @@ class BDBStore extends FileStore {
 
   def getBySignature(sig: String) = keyIndex.get(sig)
 
-  def finish(key: String, tmpFile: File) = {
-    val dup = getBySignature(key)
-    if (dup == null) {
-      val id = primarySequence.get(null, 1)
-      val storeFile = new File(IDToStorePath(id))
-      println("storing new file to: " + storeFile)
-      val renameSuccess = (tmpFile renameTo storeFile)
-      println("rename success: " + renameSuccess)
-      if (renameSuccess)
-        put(new FileRecord(id, key))
+  def storeFile(key: String, tmpFile: File) = {
+    val id = primarySequence.get(null, 1)
+    val storeFile = new File(IDToStorePath(id))
+    val renameSuccess = (tmpFile renameTo storeFile)
+    if (renameSuccess)
+      put(new FileRecord(id, key))
+    else
+      throw new RuntimeException("could not store file move to permanent store failed")
+  }
+
+  def finish(key: String, tmpFile: File): Boolean = {
+    val dupCheck = getBySignature(key)
+
+   if (dupCheck == null) {
+      storeFile(key, tmpFile); true
     }
     else {
-      println("dup found; deleting temp file")
-      tmpFile.delete()
+      tmpFile.delete(); false
     }
   }
 
