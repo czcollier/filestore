@@ -1,4 +1,6 @@
 .idea/
 .idea_modules
+.ensime
+.ensime_lucene/
 target
 project/project
