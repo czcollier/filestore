@@ -39,8 +39,30 @@ object Build extends sbt.Build {
         Libraries.specs2,
         Libraries.slf4j,
         Libraries.akkaSlf4j,
-        Libraries.logback,
-        "commons-httpclient"      % "commons-httpclient" % "3.1"
+        Libraries.logback
+      )
+    )
+  )
+  
+  lazy val testClient = Project(
+    id = "testCient",
+    base = file("testclient"),
+    settings = standardSettings
+        ++ Seq(Revolver.settings: _*)
+        ++ Seq(atmosSettings: _*)
+        ++ Seq(
+      version           := "0.1.0",
+      resolvers         ++= Seq(
+        Repositories.sprayNightlies
+      ),
+      libraryDependencies ++= Seq(
+        Libraries.akkaActor,
+        Libraries.sprayClient,
+        Libraries.sprayJson,
+        Libraries.specs2,
+        Libraries.slf4j,
+        Libraries.akkaSlf4j,
+        Libraries.logback
       )
     )
   )

@@ -50,7 +50,7 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
       cnt += 1
       bytesWritten += bytes.length
       log.debug("wrote %d bytes to file".format(bytesWritten))
-      //sender ! AckConsumed(bytes.length)
+      sender ! AckConsumed(bytes.length)
     }
     case e: ChunkedMessageEnd =>
       val client = sender
