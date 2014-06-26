@@ -36,16 +36,16 @@ class SuspendingQueue(client: ActorRef, worker: ActorRef) extends Actor with Act
 
   def receive = {
     case part: HttpRequestPart => 
-      log.debug(s"queue received part: ${part}")
+      //log.debug(s"queue received part: ${part}")
       dispatch(part)
     case AckConsumed(bytes) =>
-      log.debug(s"queue received ack: ${bytes}")
+      //log.debug(s"queue received ack: ${bytes}")
       unackedBytes -= bytes
       require(unackedBytes >= 0)
       checkResume()
     case Terminated(worker) => context.stop(self)
     case x => {
-      log.debug(s"queue received: ${x}")
+      //log.debug(s"queue received: ${x}")
       client ! x
     }
   }

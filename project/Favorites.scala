@@ -13,6 +13,8 @@ object Favorites {
 
     val bullhornPrivate = "Bullhorn Private Repository" at bullhornProxyRepositoryUrl + "/libs-release"
 
+    val gamlor = "Gamlor-Repo" at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
+
     // bh- repositories are for publishing only in core-services.  Other projects will use them
     // for resolving Bullhorn libs, but core-services is the source of these
     val bullhornSnapshots = "Bullhorn Snapshots" at bullhornProxyRepositoryUrl + "/bh-snapshot"
@@ -20,11 +22,11 @@ object Favorites {
   }
 
   object Versions {
-    val akka          = "2.2.3"
+    val akka          = "2.3.0"
     val berkeleydb    = "3.2.76"
     val casbah        = "2.4.1"
     val dispatch      = "0.9.2"
-    val guava         = "14.0.1"
+    val guava         = "17.0"
     val jodaTime      = "1.6"
     val lift          = "2.4"
     val logback       = "1.0.7"
@@ -36,13 +38,17 @@ object Favorites {
     val specs2        = "1.14"
     //spray 1.2-Mx are not compatible with Akka 2.2.0
     //need to use a nightly build for now.
-    val spray         = "1.2.0"
+    val spray         = "1.3.1"
     val sprayJson     = "1.2.5"
     val squeryl       = "0.9.5-2"
   }
 
   object Libraries {
-    // akka 
+
+    val scalaIOFile     = "com.github.scala-incubator.io" %% "scala-io-file"   % "0.4.3"
+    val gamlorAsyncIO   = "info.gamlor.akkaasync"  %% "akka-io" % "1.0-SNAPSHOT"
+
+    // akka
     val akkaActor       = "com.typesafe.akka"         %% "akka-actor"          % Versions.akka          % "compile"
     val akkaSlf4j       = "com.typesafe.akka"         %% "akka-slf4j"          % Versions.akka
     val akkaRemote      = "com.typesafe.akka"         %% "akka-remote"         % Versions.akka

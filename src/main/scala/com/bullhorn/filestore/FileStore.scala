@@ -6,6 +6,7 @@ import java.util.UUID
 
 import akka.actor._
 import com.bullhorn.filestore.FileStore.FileRecord
+import com.google.common.base.Stopwatch
 import com.sleepycat.je.{Environment, EnvironmentConfig, SequenceConfig}
 import com.sleepycat.persist.model.{SecondaryKey, Entity, PrimaryKey}
 import com.sleepycat.persist.{EntityStore, StoreConfig}
@@ -32,10 +33,10 @@ object FileStore {
 }
 
 trait FileStore {
-  def newTempFile: File
+  def newTempFile: String
   def finish(key: String, tmpFile: File): Boolean
-  def getByID(id: Long): FileRecord
-  def getBySignature(sig: String): FileRecord
+  def getByID(id: Long): Option[FileRecord]
+  def getBySignature(sig: String): Option[FileRecord]
 }
 
 class BDBStore extends FileStore {
@@ -75,9 +76,9 @@ class BDBStore extends FileStore {
   def withTmpDir(fname: String) = "%s/%s".format(tmpDir, fname)
   def IDToStorePath(id: Long) = "%s/%s/%010d".format(baseDir, "files", id)
 
-  def newTempFile: File = {
+  def newTempFile: String = {
     val name = UUIDFromLong(tmpSequence.get(null, 1))
-    new File(withTmpDir(name))
+    withTmpDir(name)
   }
 
   private def UUIDFromLong(l: Long) = {
@@ -86,28 +87,43 @@ class BDBStore extends FileStore {
     UUID.nameUUIDFromBytes(buf.array).toString
   }
 
-  def getByID(id: Long) = primaryIndex.get(id)
+  def getByID(id: Long) = Option(primaryIndex.get(id))
 
-  def getBySignature(sig: String) = keyIndex.get(sig)
+  def getBySignature(sig: String) = {
+    val timer = Stopwatch.createStarted
+    val rec = keyIndex.get(sig)
+    //println(" ====> get by sig: %s".format(timer.toString))
+    timer.stop
+    Option(rec)
+  }
 
   def storeFile(key: String, tmpFile: File) = {
+    val timer = Stopwatch.createStarted
     val id = primarySequence.get(null, 1)
+    println(" ===> getKey: %s".format(timer))
+    timer.reset;timer.start
     val storeFile = new File(IDToStorePath(id))
+    println(" ===> makeFile: %s".format(timer))
+    timer.reset;timer.start
     val renameSuccess = (tmpFile renameTo storeFile)
-    if (renameSuccess)
+    println(" ===> rename: %s".format(timer))
+    timer.reset
+    if (renameSuccess) {
+      timer.start
       put(new FileRecord(id, key))
+      println(" ===> put: %s".format(timer))
+      timer.stop
+    }
     else
       throw new RuntimeException("could not store file move to permanent store failed")
   }
 
   def finish(key: String, tmpFile: File): Boolean = {
-    val dupCheck = getBySignature(key)
-
-   if (dupCheck == null) {
-      storeFile(key, tmpFile); true
-    }
-    else {
-      tmpFile.delete(); false
+    getBySignature(key) match {
+      case Some(f) =>
+        tmpFile.delete(); true
+      case None =>
+        storeFile(key, tmpFile); false
     }
   }
 

@@ -13,10 +13,13 @@ import HttpMethods._
 import MediaTypes._
 import spray.can.Http.RegisterChunkHandler
 
-class ChunkedFileStoreService extends Actor with ActorLogging {
-  implicit val timeout: Timeout = 1.second // for the actor 'asks'
-
+object ChunkedFileStoreService {
   val store: FileStore = new BDBStore
+}
+class ChunkedFileStoreService extends Actor with ActorLogging {
+  import ChunkedFileStoreService._
+
+  implicit val timeout: Timeout = 1.second // for the actor 'asks'
 
   def receive = {
     // when a new connection comes in we register ourselves as the connection handler
@@ -39,8 +42,8 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
 
     case s@ChunkedRequestStart(HttpRequest(POST, Uri.Path("/file-upload"), _, _, _)) =>
       val client = sender
-      val worker = context.actorOf(Props(new FileWriterActor(store, s)))
-      val queue = context.actorOf(Props(new SuspendingQueue(client, worker)))
+      val worker = context.actorOf(Props(new FileWriterActor(store, s)).withDispatcher("pinned"))
+      val queue = context.actorOf(Props(new SuspendingQueue(client, worker)).withDispatcher("pinned"))
 
       client ! RegisterChunkHandler(queue)
 

@@ -4,7 +4,7 @@ import Keys._
 
 import spray.revolver.RevolverPlugin._
 import com.github.retronym.SbtOneJar._
-import com.typesafe.sbt.SbtAtmos._
+//import com.typesafe.sbt.SbtAtmos._
 
 object Build extends sbt.Build {
 
@@ -22,7 +22,7 @@ object Build extends sbt.Build {
     base = file("."),
     settings = standardSettings
         ++ Seq(Revolver.settings: _*)
-        ++ Seq(atmosSettings: _*)
+        //++ Seq(atmosSettings: _*)
         ++ Seq(
       version           := "0.1.0",
       resolvers         ++= Seq(
@@ -31,6 +31,8 @@ object Build extends sbt.Build {
       libraryDependencies ++= Seq(
         Libraries.akkaActor,
         Libraries.berkeleydb,
+        Libraries.scalaIOFile,
+        Libraries.guava,
         Libraries.sprayCan,
         Libraries.sprayRouting,
         Libraries.sprayCaching,
@@ -49,7 +51,7 @@ object Build extends sbt.Build {
     base = file("testclient"),
     settings = standardSettings
         ++ Seq(Revolver.settings: _*)
-        ++ Seq(atmosSettings: _*)
+        //++ Seq(atmosSettings: _*)
         ++ Seq(
       version           := "0.1.0",
       resolvers         ++= Seq(
@@ -57,6 +59,7 @@ object Build extends sbt.Build {
       ),
       libraryDependencies ++= Seq(
         Libraries.akkaActor,
+        Libraries.guava,
         Libraries.sprayClient,
         Libraries.sprayJson,
         Libraries.specs2,
