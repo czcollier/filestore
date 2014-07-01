@@ -1,6 +1,8 @@
 package com.bullhorn.filestore
 
 
+import com.bullhorn.filestore.SuspendingQueue.AckConsumed
+
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -22,6 +24,7 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
 
   def receive = {
+    case AckConsumed(bytes) => log.info("%d bytes acked".format(bytes))
     // when a new connection comes in we register ourselves as the connection handler
     case _: Http.Connected => sender ! Http.Register(self)
 
@@ -42,8 +45,8 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
 
     case s@ChunkedRequestStart(HttpRequest(POST, Uri.Path("/file-upload"), _, _, _)) =>
       val client = sender
-      val worker = context.actorOf(Props(new FileWriterActor(store, s)).withDispatcher("pinned"))
-      val queue = context.actorOf(Props(new SuspendingQueue(client, worker)).withDispatcher("pinned"))
+      val worker = context.actorOf(Props(new FileWriterActor(store, s)))
+      val queue = context.actorOf(Props(new SuspendingQueue(client, worker)))
 
       client ! RegisterChunkHandler(queue)
 

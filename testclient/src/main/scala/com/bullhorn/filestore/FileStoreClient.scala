@@ -6,6 +6,7 @@ import akka.actor._
 import akka.io.{IO, Tcp}
 import akka.pattern.ask
 import akka.util.Timeout
+import com.bullhorn.filestore.FileStoreClient.AckChunk
 import com.google.common.base.Stopwatch
 import spray.can.Http
 import spray.http.HttpHeaders.RawHeader
@@ -28,7 +29,6 @@ object FileStoreClient extends App {
 
   implicit val system = ActorSystem()
 
-
   val bufSize = system.settings.config.getInt(
     "com.bullhorn.filestore.client.chunkSize")
 
@@ -37,20 +37,20 @@ object FileStoreClient extends App {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val storeClient = system.actorOf(Props[StoreFileActor])
+  //val storeClient = system.actorOf(Props[StoreFileActor])
   implicit val timeout = Timeout(120 seconds)
 
-  val testFile = "/home/ccollier/Pictures/20131116_152313.jpg"
   val testFilesPath = "/home/ccollier/Pictures/tests"
 
   val testFiles = new File(testFilesPath).listFiles
   val fcount = testFiles.length
 
+  val coordinator = system.actorOf(Props[StoreFileCoordinator])
+
   for (f <- testFiles.zipWithIndex) {
     try {
       val stream = new BufferedInputStream(new FileInputStream(f._1))
-      (storeClient ! StoreFile(stream, f._2))
-      Thread.sleep(200)
+      coordinator ! StoreFile(stream, f._2)
     }
     catch {
       case e: Exception =>
@@ -58,31 +58,37 @@ object FileStoreClient extends App {
     }
   }
 
-  class StoreFileActor extends Actor with ActorLogging {
-    var cnt = 0
+  object StoreFileCoordinator {
+    case object Tick
+  }
+
+  class StoreFileCoordinator extends Actor with ActorLogging {
+    import StoreFileCoordinator._
+
+    var successCount = 0
+    var failCount = 0
+    val ticker = context.system.scheduler.schedule(100 millis, 100 millis, self, Tick)
     def receive = {
-      case s:StoreFile =>
-         println("starting: %d".format(s.idx))
-         val worker = context.actorOf(Props(new StoreFileWorker), "storeFileWorker_%d".format(s.idx))
-         val res = (worker ? s).asInstanceOf[Future[StoreFileResult]]
-         res.onComplete {
-           r => r.map { x =>
-             x match {
-               case s: StoreFileSuccess =>
-                 cnt += 1
-                 //println(x.info)
-                 println("SUCC: %d/%d".format(cnt, fcount))
-               case f: StoreFileError =>
-                 cnt += 1
-                 println("FAIL: %d/%d".format(cnt, fcount))
-               case x =>
-                 println("??? %s".format(x.toString))
-                 cnt += 1
-             }
-             if (cnt == fcount)
-               system.shutdown
-           }
-         }
+      case sf: StoreFile =>
+        val worker = system.actorOf(Props(new StoreFileWorker), "storeFileWorker_%d".format(sf.idx))
+        worker ! sf
+      case s: StoreFileSuccess =>
+        successCount += 1
+      //println("SUCC: %d/%d/%d".format(successCount, failCount, fcount))
+      case f: StoreFileError =>
+        failCount += 1
+        log.error("FAIL: %d/%d/%d".format(successCount, failCount, fcount))
+      case Tick =>
+        if (successCount + failCount == fcount) {
+          if (context != null)
+            system.scheduler.scheduleOnce(3 seconds) {
+              log.info("stopping...")
+              system.shutdown()
+            }
+        }
+      case x =>
+        //println("??? %s".format(x.toString))
+        failCount += 1
     }
   }
 
@@ -96,29 +102,15 @@ object FileStoreClient extends App {
     var bSent = 0
 
     private def nextChunk(sender: ActorRef) {
+      val client = sender
       val br = nextBytes()
       if (br.length > 0) {
-        sender ! MessageChunk(br).withAck(AckChunk)
+        client ! MessageChunk(br).withAck(AckChunk)
         bSent += br.length
       }
       else {
-        sender ! ChunkedMessageEnd
+        client ! ChunkedMessageEnd
       }
-    }
-
-    private def allChunks(sender: ActorRef) {
-      var b = nextBytes()
-      if (b.length > 0) {
-        sender ! MessageChunk(b)
-        bSent += b.length
-      }
-      b = nextBytes()
-      while (b.length > 0) {
-        sender ! MessageChunk(b)
-        bSent += b.length
-        b = nextBytes()
-      }
-      sender ! ChunkedMessageEnd
     }
 
     private def startRequest(sender: ActorRef) {
@@ -143,14 +135,15 @@ object FileStoreClient extends App {
       case AckChunksStart => nextChunk(sender)
       case AckChunk => nextChunk(sender)
       case response@HttpResponse(status, entity, _, _) =>
-        println("sent file #%d of %d bytes in %s".format(cnt.get, bSent, timer.stop))
+        val server = sender
+        log.info("sent file #%d of %d bytes in %s".format(cnt.get, bSent, timer.stop))
         client ! StoreFileSuccess(entity.asString)
-        sender ! Http.Close
+        server ! Http.Close
       case Http.Closed =>
-        println("connection for %d closed".format(cnt.get))
-        context.stop(self)
+        //log.debug("connection for %d closed".format(cnt.get))
+        //context.stop(self)
       case Tcp.ErrorClosed(reason) =>
-        println("ERROR: %s".format(reason))
+        log.error("ERROR: %s".format(reason))
         client ! StoreFileError(reason)
       case x =>
         println("OOPS! ====> received unhandled message: %s".format(x.toString))

@@ -3,20 +3,25 @@ package com.bullhorn.filestore
 import java.io.{File, BufferedOutputStream, FileOutputStream}
 import java.security.MessageDigest
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Props, Actor, ActorLogging}
+import akka.pattern.{ ask, pipe }
+import akka.util.Timeout
 import com.bullhorn.filestore.Codec.StoredFile
+import com.bullhorn.filestore.DigestActor.{BytesConsumed, GetDigest}
 import com.bullhorn.filestore.SuspendingQueue.AckConsumed
 import com.google.common.base.Stopwatch
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
 import spray.io.CommandWrapper
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scalax.io.Resource
 
 object FileWriterActor {
-  case object Done
+  case class Done(signature: String)
   case class FileSignature(v: String)
+  case class Data(bytes: Array[Byte])
 
   def hexEncode(bytes: Array[Byte]) =
     bytes.map(0xFF & _).map { "%02x".format(_) }.foldLeft("") { _ + _ }
@@ -36,38 +41,48 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
     hdr.value
   }.getOrElse("unknown")
 
+  val digestActor = context.actorOf(Props[DigestActor], "digester_%d".format(System.identityHashCode(this)))
+  val storageActor = context.actorOf(Props(new StorageActor(store)).withDispatcher("io-dispatcher"))
+
   var cnt = 0
   var bytesWritten = 0
 
-  val tmpFile = store.newTempFile
-  val os = new BufferedOutputStream(new FileOutputStream((tmpFile)))
-  val digest = MessageDigest.getInstance("SHA-1")
+  implicit val timeout = Timeout(30 seconds)
+
+  import ExecutionContext.Implicits.global
 
   def receive = {
     case chunk: MessageChunk => {
-      val bytes = chunk.data.toByteArray
-      digest.update(bytes)
-      os.write(bytes)
-      cnt += 1
-      bytesWritten += bytes.length
-      sender ! AckConsumed(bytes.length)
+      val client = sender
+      val data = Data(chunk.data.toByteArray)
+      (digestActor ? data).mapTo[BytesConsumed].map { c =>
+        storageActor ! data
+        cnt += 1
+        bytesWritten += c.cnt
+        AckConsumed(c.cnt)
+      }
+      .pipeTo(client)
     }
     case e: ChunkedMessageEnd =>
       val client = sender
-      val fileSig = hexEncode(digest.digest)
-      os.close()
-      val dup = store.finish(fileSig, new File(tmpFile))
-      client ! HttpResponse(
-        status = 200,
-        entity = HttpEntity(StoredFile(
-          fileName,
-          contentType.toString,
-          dup,
-          bytesWritten,
-          FileSignature(fileSig)).toJson.prettyPrint))
+      val f = for {
+        sig <- (digestActor ? GetDigest).mapTo[FileSignature]
+        dup <- (storageActor ? Done(sig.v))
+      } yield {
+        log.info("done")
+        HttpResponse(
+          status = 200,
+          entity = HttpEntity(StoredFile(
+            fileName,
+            contentType.toString,
+            false,
+            bytesWritten,
+            sig).toJson.prettyPrint))
+      }
+      f.pipeTo(client).onComplete { f =>
+        client ! CommandWrapper(SetRequestTimeout(30.seconds)) // reset timeout to original value
+        context.stop(self)
+      }
 
-      client ! CommandWrapper(SetRequestTimeout(10.seconds)) // reset timeout to original value
-      log.info("done: " + fileSig)
-      context.stop(self)
   }
 }

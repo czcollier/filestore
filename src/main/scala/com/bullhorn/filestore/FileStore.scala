@@ -67,9 +67,9 @@ class BDBStore extends FileStore {
   val tmpSequence = store.getSequence("tmp")
 
   def put(f: FileRecord) = {
-    val txn = env.beginTransaction(null, null)
+    //val txn = env.beginTransaction(null, null)
     primaryIndex.put(f)
-    txn.commit()
+    //txn.commit()
     f.id
   }
 
