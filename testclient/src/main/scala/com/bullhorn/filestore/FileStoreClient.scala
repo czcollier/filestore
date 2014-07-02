@@ -22,7 +22,7 @@ object FileStoreClient extends App {
   case object StartTest
   case object AckChunksStart
   case object AckChunk
-  case class StoreFile(data: InputStream, idx: Int)
+  case class StoreFile(data: InputStream, id: String)
   abstract class StoreFileResult
   case class StoreFileSuccess(info: String) extends StoreFileResult
   case class StoreFileError(info: String) extends StoreFileResult
@@ -44,19 +44,23 @@ object FileStoreClient extends App {
 
   val testFiles = new File(testFilesPath).listFiles
   val fcount = testFiles.length
+  val numRuns = 10
+  val testCnt = fcount * numRuns
 
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
 
-  for (f <- testFiles.zipWithIndex) {
-    try {
-      val stream = new BufferedInputStream(new FileInputStream(f._1))
-      coordinator ! StoreFile(stream, f._2)
+  for (i <- 1 to numRuns)
+    for (f <- testFiles.zipWithIndex) {
+      try {
+        val stream = new BufferedInputStream(new FileInputStream(f._1))
+        coordinator ! StoreFile(stream, s"${f._2}_$i")
+        Thread.sleep(100)
+      }
+      catch {
+        case e: Exception =>
+          println("error opening file: " + e)
+      }
     }
-    catch {
-      case e: Exception =>
-        println("error opening file: " + e)
-    }
-  }
 
   object StoreFileCoordinator {
     case object Tick
@@ -70,7 +74,7 @@ object FileStoreClient extends App {
     val ticker = context.system.scheduler.schedule(100 millis, 100 millis, self, Tick)
     def receive = {
       case sf: StoreFile =>
-        val worker = system.actorOf(Props(new StoreFileWorker), "storeFileWorker_%d".format(sf.idx))
+        val worker = system.actorOf(Props(new StoreFileWorker), "storeFileWorker_%s".format(sf.id))
         worker ! sf
       case s: StoreFileSuccess =>
         successCount += 1
@@ -79,7 +83,7 @@ object FileStoreClient extends App {
         failCount += 1
         log.error("FAIL: %d/%d/%d".format(successCount, failCount, fcount))
       case Tick =>
-        if (successCount + failCount == fcount) {
+        if (successCount + failCount == testCnt) {
           if (context != null)
             system.scheduler.scheduleOnce(3 seconds) {
               log.info("stopping...")
@@ -97,7 +101,7 @@ object FileStoreClient extends App {
 
     var client: ActorRef = null//context.system.deadLetters
     var inStream: Option[InputStream] = None
-    var cnt: Option[Int] = None
+    var cnt: Option[String] = None
     val timer = Stopwatch.createUnstarted
     var bSent = 0
 
@@ -136,7 +140,7 @@ object FileStoreClient extends App {
       case AckChunk => nextChunk(sender)
       case response@HttpResponse(status, entity, _, _) =>
         val server = sender
-        log.info("sent file #%d of %d bytes in %s".format(cnt.get, bSent, timer.stop))
+        log.info("sent file #%s of %d bytes in %s".format(cnt.get, bSent, timer.stop))
         client ! StoreFileSuccess(entity.asString)
         server ! Http.Close
       case Http.Closed =>

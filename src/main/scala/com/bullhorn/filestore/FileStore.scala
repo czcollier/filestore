@@ -89,11 +89,9 @@ class BDBStore extends FileStore {
 
   def getByID(id: Long) = Option(primaryIndex.get(id))
 
-  def getBySignature(sig: String) = {
-    val timer = Stopwatch.createStarted
+  def getBySignature(sig: String): Option[FileRecord] = {
+    //val timer = Stopwatch.createStarted
     val rec = keyIndex.get(sig)
-    //println(" ====> get by sig: %s".format(timer.toString))
-    timer.stop
     Option(rec)
   }
 
