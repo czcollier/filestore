@@ -47,7 +47,7 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
   var cnt = 0
   var bytesWritten = 0
 
-  implicit val timeout = Timeout(30 seconds)
+  implicit val timeout = Timeout(90 seconds)
 
   import ExecutionContext.Implicits.global
 
@@ -80,7 +80,7 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
             sig).toJson.prettyPrint))
       }
       f.pipeTo(client).onComplete { f =>
-        client ! CommandWrapper(SetRequestTimeout(30.seconds)) // reset timeout to original value
+        client ! CommandWrapper(SetRequestTimeout(90.seconds)) // reset timeout to original value
         context.stop(self)
       }
 
