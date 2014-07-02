@@ -16,15 +16,12 @@ import spray.io.CommandWrapper
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scalax.io.Resource
+import scalax.io.{End, Resource}
 
 object FileWriterActor {
   case class Done(signature: String)
   case class FileSignature(v: String)
   case class Data(bytes: Array[Byte])
-
-  def hexEncode(bytes: Array[Byte]) =
-    bytes.map(0xFF & _).map { "%02x".format(_) }.foldLeft("") { _ + _ }
 
   object FileNameHeader extends RawHeader("file-name", "fn")
 }
@@ -35,17 +32,22 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
   import spray.json._
   import Codec.FileStoreJsonProtocol._
   import scala.language.implicitConversions
+  import Resources._
   
   val contentType = header[HttpHeaders.`Content-Type`].getOrElse(ContentTypes.`text/plain(UTF-8)`)
   val fileName = start.message.headers.find(h => h.name == "file-name").map { hdr =>
     hdr.value
   }.getOrElse("unknown")
 
-  val digestActor = context.actorOf(Props[DigestActor], "digester_%d".format(System.identityHashCode(this)))
-  val storageActor = context.actorOf(Props(new StorageActor(store)).withDispatcher("io-dispatcher"))
+  val digestActor = context.actorOf(Props[DigestActor],
+    "digester_%d".format(System.identityHashCode(this)))
+  val fileDbActor = context.actorOf(Props(new FileDbActor(db)).withDispatcher("single-dispatcher"))
+  val permStorageActor = context.actorOf(Props(new PermStorageActor(store, fileDbActor)).withDispatcher("io-dispatcher"))
+  val tempStorageActor = context.actorOf(Props(new TempStorageActor(store, permStorageActor)).withDispatcher("io-dispatcher"))
 
   var cnt = 0
   var bytesWritten = 0
+  val timer = Stopwatch.createStarted
 
   implicit val timeout = Timeout(90 seconds)
 
@@ -56,7 +58,7 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
       val client = sender
       val data = Data(chunk.data.toByteArray)
       (digestActor ? data).mapTo[BytesConsumed].map { c =>
-        storageActor ! data
+        tempStorageActor ! data
         cnt += 1
         bytesWritten += c.cnt
         AckConsumed(c.cnt)
@@ -67,9 +69,9 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
       val client = sender
       val f = for {
         sig <- (digestActor ? GetDigest).mapTo[FileSignature]
-        dup <- (storageActor ? Done(sig.v))
+        dup <- (tempStorageActor ? Done(sig.v))
       } yield {
-        log.info("done")
+        log.info("done: %d chunks, %d bytes in %s".format(cnt, bytesWritten, timer.stop))
         HttpResponse(
           status = 200,
           entity = HttpEntity(StoredFile(

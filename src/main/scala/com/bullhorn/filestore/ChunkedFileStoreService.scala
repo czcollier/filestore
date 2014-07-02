@@ -4,22 +4,16 @@ package com.bullhorn.filestore
 import com.bullhorn.filestore.SuspendingQueue.AckConsumed
 
 import scala.concurrent.duration._
-import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor._
 import spray.can.Http
-import spray.can.server.Stats
-import spray.util._
 import spray.http._
 import HttpMethods._
-import MediaTypes._
 import spray.can.Http.RegisterChunkHandler
 
-object ChunkedFileStoreService {
-  val store: FileStore = new BDBStore
-}
+
 class ChunkedFileStoreService extends Actor with ActorLogging {
-  import ChunkedFileStoreService._
+  import Resources._
 
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
 

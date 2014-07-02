@@ -14,7 +14,7 @@ import spray.http.Uri.Path
 import spray.http._
 import scala.concurrent.duration._
 import scala.concurrent.Future
-
+import util.Random
 import scala.collection.JavaConversions._
 
 
@@ -40,27 +40,24 @@ object FileStoreClient extends App {
   //val storeClient = system.actorOf(Props[StoreFileActor])
   implicit val timeout = Timeout(120 seconds)
 
-  val testFilesPath = "/home/ccollier/Pictures/tests"
+  val testFilesPath = "/home/ccollier/Pictures/tests2"
 
   val testFiles = new File(testFilesPath).listFiles
-  val fcount = testFiles.length
-  val numRuns = 10
-  val testCnt = fcount * numRuns
+  val testCnt = testFiles.length * 5
 
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
-
-  for (i <- 1 to numRuns)
-    for (f <- testFiles.zipWithIndex) {
-      try {
-        val stream = new BufferedInputStream(new FileInputStream(f._1))
-        coordinator ! StoreFile(stream, s"${f._2}_$i")
-        Thread.sleep(100)
-      }
-      catch {
-        case e: Exception =>
-          println("error opening file: " + e)
-      }
+  val tests = Stream.continually(Random.nextInt(testFiles.length)).take(testCnt)
+  for (i <- tests.zipWithIndex) {
+    try {
+      val stream = new BufferedInputStream(new FileInputStream(testFiles(i._1)))
+      coordinator ! StoreFile(stream, s"${i._2}")
+      Thread.sleep(100)
     }
+    catch {
+      case e: Exception =>
+        println("error opening file: " + e)
+    }
+  }
 
   object StoreFileCoordinator {
     case object Tick
@@ -71,28 +68,38 @@ object FileStoreClient extends App {
 
     var successCount = 0
     var failCount = 0
-    val ticker = context.system.scheduler.schedule(100 millis, 100 millis, self, Tick)
+    var lastTick = System.currentTimeMillis
+    var lastCount = 0
+
+    def doneCount = successCount + failCount
+
+    val ticker = context.system.scheduler.schedule(3 seconds, 3 seconds, self, Tick)
     def receive = {
       case sf: StoreFile =>
-        val worker = system.actorOf(Props(new StoreFileWorker), "storeFileWorker_%s".format(sf.id))
-        worker ! sf
-      case s: StoreFileSuccess =>
-        successCount += 1
-      //println("SUCC: %d/%d/%d".format(successCount, failCount, fcount))
-      case f: StoreFileError =>
-        failCount += 1
-        log.error("FAIL: %d/%d/%d".format(successCount, failCount, fcount))
+        val worker = context.actorOf(Props(new StoreFileWorker), "storeFileWorker_%s".format(sf.id))
+        val timer = Stopwatch.createStarted
+        (worker ? sf).collect {
+          case s: StoreFileSuccess =>
+            successCount += 1
+            println("SUCC: %d/%d/%s".format(successCount, failCount, timer.toString))
+          case f: StoreFileError =>
+            failCount += 1
+            log.error("FAIL: %d/%d/%d".format(successCount, failCount, testCnt))
+          case x =>
+            println("??? %s".format(x.toString))
+            failCount += 1
+        }
       case Tick =>
-        if (successCount + failCount == testCnt) {
+        log.info("%d/%d uploads completed".format(doneCount, testCnt))
+        log.info("done: %d, last: %d".format(doneCount, lastCount))
+        if ((doneCount - lastCount) < 1) {
           if (context != null)
             system.scheduler.scheduleOnce(3 seconds) {
-              log.info("stopping...")
+              log.info("rate low; stopping...")
               system.shutdown()
             }
         }
-      case x =>
-        //println("??? %s".format(x.toString))
-        failCount += 1
+        lastCount = doneCount
     }
   }
 
@@ -140,7 +147,7 @@ object FileStoreClient extends App {
       case AckChunk => nextChunk(sender)
       case response@HttpResponse(status, entity, _, _) =>
         val server = sender
-        log.info("sent file #%s of %d bytes in %s".format(cnt.get, bSent, timer.stop))
+        //log.info("sent file #%s of %d bytes in %s".format(cnt.get, bSent, timer.stop))
         client ! StoreFileSuccess(entity.asString)
         server ! Http.Close
       case Http.Closed =>

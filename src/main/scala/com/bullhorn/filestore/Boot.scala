@@ -10,7 +10,7 @@ object Boot extends App {
 
   // create and start our service actor
   //val service = system.actorOf(Props[FileStoreServiceActor], "filestore-service")
-  val handler = system.actorOf(Props[ChunkedFileStoreService], name = "filestore-handler")
+  val handler = system.actorOf(Props[ChunkedFileStoreService], name = "chunked-filestore-service")
   // start a new HTTP server on port 8080 with our service actor as the handler
   IO(Http) ! Http.Bind(handler, "0.0.0.0", port = 8080)
 }
