@@ -6,6 +6,7 @@ import akka.actor.{ActorRef, Actor, ActorLogging}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.bullhorn.filestore.FileWriterActor.{Done, Data}
+import com.bullhorn.filestore.PermStorageActor.FileWithSignature
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -21,6 +22,6 @@ class TempStorageActor(store: FileStore, permStorage: ActorRef) extends Actor wi
     case Done(fileSig) =>
       val client = sender
       os.close()
-      (permStorage ? (fileSig, new File(tmpFile))).mapTo[Boolean].pipeTo(client)
+      permStorage ! FileWithSignature(fileSig, tmpFile)
   }
 }

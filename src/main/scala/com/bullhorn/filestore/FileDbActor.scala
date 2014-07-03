@@ -1,14 +1,22 @@
 package com.bullhorn.filestore
 
 import akka.actor.{Actor, ActorLogging}
+import com.bullhorn.filestore.PermStorageActor.{DuplicateFile, FileWithSignature, StorableFile}
 
-object FileDbActor {
-  case class Finish(signature: String)
-}
+import scala.concurrent.Future
+
 class FileDbActor(db: FileDb) extends Actor with ActorLogging {
-  import FileDbActor._
 
   def receive = {
-    case Finish(sig) => sender ! db.finish(sig)
+    case FileWithSignature(sig, file) =>
+      val client = sender
+      val msgFut = Future {
+        db.finish(sig)
+      }
+
+      msgFut.onComplete {
+        case Some(id: Long) => client ! StorableFile(id, file)
+        case None => client ! DuplicateFile(file)
+      }
   }
 }

@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.util.UUID
 
 import com.bullhorn.filestore.FileDb.FileRecord
+import com.bullhorn.filestore.PermStorageActor.FileWithSignature
 import com.google.common.base.Stopwatch
 import com.sleepycat.je._
 import com.sleepycat.persist.model.{SecondaryKey, PrimaryKey, Entity}
@@ -79,14 +80,14 @@ class BerkeleyFileDb extends FileDb {
     Option(rec)
   }
 
-  def finish(signature: String): Option[Long] = {
+  def finish(sig: String, f: File): Option[Long] = {
     val timer = Stopwatch.createStarted
     implicit val txn = env.beginTransaction(null, null)
     try {
-      val ret = Option(keyIndex.get(txn, signature, LockMode.READ_UNCOMMITTED)) match {
+      val ret = Option(keyIndex.get(txn, sig, LockMode.READ_UNCOMMITTED)) match {
         case Some(f) => None
         case None => {
-          val rec = new FileRecord(signature)
+          val rec = new FileRecord(sig)
           primaryIndex.put(txn, rec)
           txn.commit()
           Some(rec.id)
