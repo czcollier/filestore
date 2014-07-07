@@ -1,6 +1,6 @@
 package com.bullhorn.filestore
 
-import com.bullhorn.filestore.FileWriterActor.FileSignature
+import com.bullhorn.filestore.StorageParentActor.FileSignature
 import spray.httpx.unmarshalling.DeserializationError
 import spray.json._
 

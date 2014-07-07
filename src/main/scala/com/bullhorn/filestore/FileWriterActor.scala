@@ -8,6 +8,8 @@ import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import com.bullhorn.filestore.Codec.StoredFile
 import com.bullhorn.filestore.DigestActor.{BytesConsumed, GetDigest}
+import com.bullhorn.filestore.PermStorageActor.FileStored
+import com.bullhorn.filestore.StorageParentActor.{FileChunk, FileSignature}
 import com.bullhorn.filestore.SuspendingQueue.AckConsumed
 import com.google.common.base.Stopwatch
 import spray.http.HttpHeaders.RawHeader
@@ -19,10 +21,6 @@ import scala.concurrent.duration._
 import scalax.io.{End, Resource}
 
 object FileWriterActor {
-  case class Done(signature: String)
-  case class FileSignature(v: String)
-  case class Data(bytes: Array[Byte])
-
   object FileNameHeader extends RawHeader("file-name", "fn")
 }
 
@@ -41,9 +39,8 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
 
   val digestActor = context.actorOf(Props[DigestActor],
     "digester_%d".format(System.identityHashCode(this)))
-  val fileDbActor = context.actorOf(Props(new FileDbActor(db)).withDispatcher("single-dispatcher"))
-  val permStorageActor = context.actorOf(Props(new PermStorageActor(store, fileDbActor)).withDispatcher("io-dispatcher"))
-  val tempStorageActor = context.actorOf(Props(new TempStorageActor(store, permStorageActor)).withDispatcher("io-dispatcher"))
+
+  val storageActor = context.actorOf(StorageParentActor(db, store))
 
   var cnt = 0
   var bytesWritten = 0
@@ -53,23 +50,26 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
 
   import ExecutionContext.Implicits.global
 
+  //try creating an intermediary "responder" actor that
+  //brokers between client and storageActor -- solves
+  //the problem of maintaining connection betw. client
+  //and storage actor that must respond to client when
+  //done with work
   def receive = {
     case chunk: MessageChunk => {
       val client = sender
-      val data = Data(chunk.data.toByteArray)
-      (digestActor ? data).mapTo[BytesConsumed].map { c =>
-        tempStorageActor ! data
-        cnt += 1
-        bytesWritten += c.cnt
-        AckConsumed(c.cnt)
-      }
-      .pipeTo(client)
+      val fChunk = FileChunk(chunk.data.toByteArray)
+      digestActor ! fChunk
+      storageActor ! fChunk
+      cnt += 1
+      bytesWritten += fChunk.bytes.length
+      client ! AckConsumed(fChunk.bytes.length)
     }
     case e: ChunkedMessageEnd =>
       val client = sender
       val f = for {
         sig <- (digestActor ? GetDigest).mapTo[FileSignature]
-        dup <- (tempStorageActor ? Done(sig.v))
+        dup <- (storageActor ? sig)
       } yield {
         log.info("done: %d chunks, %d bytes in %s".format(cnt, bytesWritten, timer.stop))
         HttpResponse(
@@ -85,6 +85,5 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
         client ! CommandWrapper(SetRequestTimeout(90.seconds)) // reset timeout to original value
         context.stop(self)
       }
-
   }
 }

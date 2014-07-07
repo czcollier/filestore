@@ -17,19 +17,20 @@ class FileStore(db: FileDb) {
 
   def newTempFile: String = withTempDir(db.newTempFileId)
 
-  def storeFile(idOption: Option[Long], tmpFile: File): Boolean = {
-    idOption match {
-      case None => tmpFile.delete(); true
-      case Some(id) =>
-        val path = withPermDir(formatPermFileName(id))
-        println("storing file at: %s".format(path))
+  def moveToPerm(tempName: String, id: Long): String = {
+    val permFile = new File(withPermDir(formatPermFileName(id)))
+    val tempFile = new File(withTempDir(tempName))
+    println("moving temp file %s to permanent location: %s".format(tempFile.getPath, permFile.getPath))
+    val renameSuccess = (tempFile renameTo permFile)
+    if (!renameSuccess)
+      throw new RuntimeException("could not store file move to permanent store failed")
 
-        val storeFile = new File(path)
-        val renameSuccess = (tmpFile renameTo storeFile)
-        if (!renameSuccess)
-          throw new RuntimeException("could not store file move to permanent store failed")
-        false
-    }
+    permFile.getPath
+  }
+
+  def deleteTempFile(tempName: String): Boolean = {
+    val tempFile = new File(withTempDir(tempName))
+    tempFile.delete()
   }
 }
 

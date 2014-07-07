@@ -1,42 +1,53 @@
 package com.bullhorn.filestore
 
-import java.io.File
-
 import akka.actor.{ActorRef, Props, Actor, ActorLogging}
-import akka.pattern.{ask, pipe}
 import akka.util.Timeout
-import com.bullhorn.filestore.FileDbActor.Finish
-import com.bullhorn.filestore.PermStorageActor.{FileWithSignature, StorableFile}
+import com.bullhorn.filestore.PermStorageActor.{FileStored, DuplicateFile, FileWithSignature, StorableFile}
 import scala.concurrent.duration._
 import scala.concurrent.{Future, ExecutionContext}
 import scala.util.{Success, Failure}
 
 object PermStorageActor {
-  case class StorableFile(id: Long, file: File)
-  case class DuplicateFile(file: File)
-  case class FileWithSignature(signature: String, file: File)
+  case class StorableFile(tempName: String, id: Long)
+  case object FileStored
+  case class DuplicateFile(tempName: String)
+  case class FileWithSignature(signature: String, tempName: String)
+
+  def apply(store: FileStore, parent: ActorRef, dbActor: ActorRef) = Props(new PermStorageActor(store, parent, dbActor))
 }
 class PermStorageActor(
         store: FileStore,
-        dbActor: ActorRef,
-        tmpActor: ActorRef)
+        parent: ActorRef,
+        dbActor: ActorRef)
     extends Actor with ActorLogging {
 
   implicit val ec: ExecutionContext = context.dispatcher
-
   implicit val timeout = Timeout(90 seconds)
-
-  var client: Option[ActorRef] = None
 
   def receive = {
     case fs: FileWithSignature => dbActor ! fs
-    case StorableFile(id, f) =>
+    case StorableFile(n, id) =>
       val fut = Future {
-        store.storeFile(id, f)
+        store.moveToPerm(n, id)
       }
       fut.onComplete {
-        case Failure(x) => throw x
-        case Success(v) => tmpActor  ! v
+        case Failure(e) => throw e
+        case Success(v: String) => {
+          log.info("stored file: %s".format(v.toString))
+          parent ! FileStored
+        }
+      }
+    case DuplicateFile(f) =>
+      val logg = log
+      val fut = Future {
+        store.deleteTempFile(f)
+      }
+      fut.onComplete {
+        case Failure(e) => throw e
+        case Success(v) => {
+          logg.info("deleted temp file: %s".format(v.toString))
+          parent ! FileStored
+        }
       }
   }
 }

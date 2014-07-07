@@ -3,7 +3,7 @@ package com.bullhorn.filestore
 import java.security.MessageDigest
 
 import akka.actor.{Actor, ActorLogging}
-import com.bullhorn.filestore.FileWriterActor._
+import com.bullhorn.filestore.StorageParentActor.{FileChunk, FileSignature}
 
 object DigestActor {
   case object GetDigest
@@ -19,7 +19,7 @@ class DigestActor extends Actor with ActorLogging {
     bytes.map(0xFF & _).map { "%02x".format(_) }.foldLeft("") { _ + _ }
 
   def receive: Receive = {
-    case Data(bytes) =>
+    case FileChunk(bytes) =>
       val client = sender
       digest.update(bytes)
       client ! BytesConsumed(bytes.length)

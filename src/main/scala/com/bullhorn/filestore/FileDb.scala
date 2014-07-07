@@ -80,7 +80,7 @@ class BerkeleyFileDb extends FileDb {
     Option(rec)
   }
 
-  def finish(sig: String, f: File): Option[Long] = {
+  def finish(sig: String): Option[Long] = {
     val timer = Stopwatch.createStarted
     implicit val txn = env.beginTransaction(null, null)
     try {
