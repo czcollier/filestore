@@ -37,12 +37,14 @@ class PermStorageActor(
               FileStored(f)
             }
             x.pipeTo(topSender)
+            context.stop(self)
 
           case DuplicateFile(f) =>
             val logg = log
             store.deleteTempFile(f)
             logg.info("deleted temp file: %s".format(f.toString))
             topSender ! FileStored(f)
+            context.stop(self)
         }
       }))
   }

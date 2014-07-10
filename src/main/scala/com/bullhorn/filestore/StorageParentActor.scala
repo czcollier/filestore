@@ -25,8 +25,8 @@ class StorageParentActor(store: FileStore) extends Actor with ActorLogging {
           case fws: FileWithSignature =>
             permStorageActor ! fws
           case fs: FileStored =>
-            log.info("stored a file: %s".format(fs.name))
             origSender ! fs
+            context.stop(self)
         }
       }))
   }

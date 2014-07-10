@@ -84,11 +84,11 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
                 false,
                 bytesWritten,
                 sig.get).toJson.prettyPrint))
-            //client ! CommandWrapper(SetRequestTimeout(90.seconds)) // reset timeout to original value
-            //context.stop(self)
+            client ! CommandWrapper(SetRequestTimeout(90.seconds)) // reset timeout to original value
+            context.stop(self)
           }
         }
       }))
-      //context.stop(self)
+      context.stop(self)
   }
 }

@@ -156,8 +156,16 @@ object FileStoreClient extends App {
       case Tcp.ErrorClosed(reason) =>
         log.error("ERROR: %s".format(reason))
         client ! StoreFileError(reason)
+        context.stop(self)
       case x =>
         println("OOPS! ====> received unhandled message: %s".format(x.toString))
+        context.stop(self)
+    }
+
+    override def postStop() {
+      inStream.foreach { s =>
+        s.close()
+      }
     }
 
     private def nextBytes(): Array[Byte] = {
