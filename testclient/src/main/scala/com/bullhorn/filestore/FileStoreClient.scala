@@ -40,10 +40,10 @@ object FileStoreClient extends App {
   //val storeClient = system.actorOf(Props[StoreFileActor])
   implicit val timeout = Timeout(1000 seconds)
 
-  val testFilesPath = "/home/ccollier/Pictures/tests2"
+  val testFilesPath = "/home/ccollier/Pictures/tests"
 
   val testFiles = new File(testFilesPath).listFiles
-  val testCnt = testFiles.length * 1000
+  val testCnt = testFiles.length * 5
 
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
   val tests = Stream.continually(Random.nextInt(testFiles.length)).take(testCnt)
@@ -51,6 +51,7 @@ object FileStoreClient extends App {
     try {
       val stream = new BufferedInputStream(new FileInputStream(testFiles(i._1)))
       coordinator ! StoreFile(stream, s"${i._2}")
+      Thread.sleep(1000)
     }
     catch {
       case e: Exception =>
@@ -152,14 +153,15 @@ object FileStoreClient extends App {
         server ! Http.Close
       case Http.Closed =>
         log.debug("connection for %s closed".format(cnt.get))
-        context.stop(self)
+        //context.stop(self)
+
       case Tcp.ErrorClosed(reason) =>
         log.error("ERROR: %s".format(reason))
         client ! StoreFileError(reason)
-        context.stop(self)
+        //context.stop(self)
       case x =>
         println("OOPS! ====> received unhandled message: %s".format(x.toString))
-        context.stop(self)
+        //context.stop(self)
     }
 
     override def postStop() {

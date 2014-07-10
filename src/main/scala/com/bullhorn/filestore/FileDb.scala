@@ -15,16 +15,9 @@ import com.typesafe.config.ConfigFactory
 
 
 object FileDb {
-  @Entity
-  class FileRecord(idParm: Long, sigParm: String) {
-    @PrimaryKey(sequence="pk")
-    val id: Long = idParm
-
-    @SecondaryKey(relate=ONE_TO_ONE)
-    val signature: String = sigParm
-
-    def this() = this(0, null)
-    def this(sig: String) = this(0, sig)
+  trait FileRecord {
+    val id: Long
+    val signature: String
   }
 
   val instance = new BerkeleyFileDb
@@ -38,8 +31,21 @@ trait FileDb {
   def getByID(id: Long): Option[FileRecord]
   def getBySignature(sig: String): Option[FileRecord]
 }
+
 object BerkeleyFileDb {
+  @Entity
+  class BdbFileRecord(idParm: Long, sigParm: String) extends FileDb.FileRecord {
+    @PrimaryKey(sequence="pk")
+    val id: Long = idParm
+
+    @SecondaryKey(relate=ONE_TO_ONE)
+    val signature: String = sigParm
+
+    def this() = this(0, null)
+    def this(sig: String) = this(0, sig)
+  }
 }
+
 class BerkeleyFileDb extends FileDb {
   import BerkeleyFileDb._
   val config = ConfigFactory.load()
@@ -95,7 +101,7 @@ class BerkeleyFileDb extends FileDb {
         val ret = Option(keyIndex.get(txn, sig, LockMode.RMW)) match {
           case Some(f) => None
           case None => {
-            val rec = new FileRecord(sig)
+            val rec = new BdbFileRecord(sig)
             primaryIndex.put(txn, rec)
             Some(rec.id)
           }

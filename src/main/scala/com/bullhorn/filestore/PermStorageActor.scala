@@ -1,13 +1,9 @@
 package com.bullhorn.filestore
 
-import akka.actor.{ActorRef, Props, Actor, ActorLogging}
-import akka.pattern.{ask, pipe}
-import akka.util.Timeout
+import akka.actor.{Actor, ActorLogging, Props}
+import akka.pattern.pipe
 import com.bullhorn.filestore.FileDbActor.{DuplicateFile, StorableFile}
 import com.bullhorn.filestore.PermStorageActor.{FileStored, FileWithSignature}
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
-import scala.util.{Success, Failure}
 
 object PermStorageActor {
   case class FileStored(name: String)
@@ -19,10 +15,7 @@ class PermStorageActor(
         store: FileStore)
     extends Actor with ActorLogging {
 
-  implicit val ec: ExecutionContext = context.dispatcher
-  implicit val timeout = Timeout(90 seconds)
-
-  val dbActor = context.actorOf(FileDbActor(FileDb.instance))
+  val dbActor = context.actorOf(FileDbActor(Resources.db))
 
   def receive = {
     case fs: FileWithSignature =>
