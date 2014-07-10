@@ -29,6 +29,7 @@ object FileDb {
 
   val instance = new BerkeleyFileDb
   def apply() = instance
+
 }
 
 trait FileDb {
@@ -37,8 +38,10 @@ trait FileDb {
   def getByID(id: Long): Option[FileRecord]
   def getBySignature(sig: String): Option[FileRecord]
 }
-
+object BerkeleyFileDb {
+}
 class BerkeleyFileDb extends FileDb {
+  import BerkeleyFileDb._
   val config = ConfigFactory.load()
 
   val baseDir = config.getString("com.bullhorn.filestore.store.basedir")
@@ -47,6 +50,8 @@ class BerkeleyFileDb extends FileDb {
   val envConfig = EnvironmentConfig.DEFAULT
   envConfig.setAllowCreate(true)
   envConfig.setTransactional(true)
+  envConfig.setTxnSerializableIsolation(true)
+
   val env = new Environment(new File("%s/db".format(baseDir)), envConfig)
 
   val storeConfig = StoreConfig.DEFAULT
@@ -65,6 +70,8 @@ class BerkeleyFileDb extends FileDb {
   store.getSequenceConfig("tmp").setAllowCreate(true)
   val tmpSequence = store.getSequence("tmp")
 
+  private val writeLock = new Object()
+
   def newTempFileId: String = UUIDFromLong(tmpSequence.get(null, 1))
 
   private def UUIDFromLong(l: Long) = {
@@ -82,23 +89,26 @@ class BerkeleyFileDb extends FileDb {
 
   def finish(sig: String): Option[Long] = {
     val timer = Stopwatch.createStarted
-    implicit val txn = env.beginTransaction(null, null)
-    try {
-      val ret = Option(keyIndex.get(txn, sig, LockMode.READ_UNCOMMITTED)) match {
-        case Some(f) => None
-        case None => {
-          val rec = new FileRecord(sig)
-          primaryIndex.put(txn, rec)
-          txn.commit()
-          Some(rec.id)
+    writeLock.synchronized {
+      val txn = env.beginTransaction(null, null)
+      try {
+        val ret = Option(keyIndex.get(txn, sig, LockMode.RMW)) match {
+          case Some(f) => None
+          case None => {
+            val rec = new FileRecord(sig)
+            primaryIndex.put(txn, rec)
+            Some(rec.id)
+          }
         }
+        txn.commit()
+        println("finish took: %s".format(timer))
+        ret
       }
-      println("finish took: %s".format(timer))
-      ret
-    }
-    catch {
-      case e: Exception => txn.abort()
-      throw e
+      catch {
+        case e: Throwable =>
+          txn.abort()
+          throw e
+      }
     }
   }
 }

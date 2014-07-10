@@ -6,23 +6,23 @@ import akka.actor.{Props, ActorRef, Actor, ActorLogging}
 import akka.util.Timeout
 import com.bullhorn.filestore.PermStorageActor.FileWithSignature
 import com.bullhorn.filestore.StorageParentActor.{FileSignature, FileChunk}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 object TempStorageActor {
-  def apply(store: FileStore, permActor: ActorRef) = Props(new TempStorageActor(store, permActor))
+  def apply(store: FileStore) = Props(new TempStorageActor(store))
 }
 
-class TempStorageActor(store: FileStore, permActor: ActorRef) extends Actor with ActorLogging {
+class TempStorageActor(store: FileStore) extends Actor with ActorLogging {
 
   val tmpFile = store.newTempFile
   val os = new BufferedOutputStream(new FileOutputStream((tmpFile)))
 
-  implicit val timeout = Timeout(90 seconds)
-
   def receive = {
     case FileChunk(bytes) => os.write(bytes)
     case FileSignature(fileSig) =>
+      val client = sender
       os.close()
-      permActor ! FileWithSignature(fileSig, tmpFile)
+      client ! FileWithSignature(fileSig, tmpFile)
   }
 }

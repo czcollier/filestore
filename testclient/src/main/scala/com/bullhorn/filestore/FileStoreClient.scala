@@ -38,12 +38,12 @@ object FileStoreClient extends App {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   //val storeClient = system.actorOf(Props[StoreFileActor])
-  implicit val timeout = Timeout(120 seconds)
+  implicit val timeout = Timeout(1000 seconds)
 
   val testFilesPath = "/home/ccollier/Pictures/tests2"
 
   val testFiles = new File(testFilesPath).listFiles
-  val testCnt = testFiles.length * 5
+  val testCnt = testFiles.length * 1000
 
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
   val tests = Stream.continually(Random.nextInt(testFiles.length)).take(testCnt)
@@ -51,7 +51,6 @@ object FileStoreClient extends App {
     try {
       val stream = new BufferedInputStream(new FileInputStream(testFiles(i._1)))
       coordinator ! StoreFile(stream, s"${i._2}")
-      Thread.sleep(100)
     }
     catch {
       case e: Exception =>
@@ -77,17 +76,18 @@ object FileStoreClient extends App {
     def receive = {
       case sf: StoreFile =>
         val worker = context.actorOf(Props(new StoreFileWorker), "storeFileWorker_%s".format(sf.id))
+        log.info("storing: %s.".format(sf.id))
         val timer = Stopwatch.createStarted
         (worker ? sf).collect {
           case s: StoreFileSuccess =>
             successCount += 1
-            println("SUCC: %d/%d/%s".format(successCount, failCount, timer.toString))
+            log.info("SUCC: %d/%d/%s".format(successCount, failCount, timer.toString))
           case f: StoreFileError =>
             failCount += 1
-            log.error("FAIL: %d/%d/%d".format(successCount, failCount, testCnt))
+            log.info("FAIL: %d/%d/%d".format(successCount, failCount, testCnt))
           case x =>
-            println("??? %s".format(x.toString))
             failCount += 1
+            log.info("??? %s".format(x.toString))
         }
       case Tick =>
         log.info("%d/%d uploads completed".format(doneCount, testCnt))
@@ -151,8 +151,8 @@ object FileStoreClient extends App {
         client ! StoreFileSuccess(entity.asString)
         server ! Http.Close
       case Http.Closed =>
-        //log.debug("connection for %d closed".format(cnt.get))
-        //context.stop(self)
+        log.debug("connection for %s closed".format(cnt.get))
+        context.stop(self)
       case Tcp.ErrorClosed(reason) =>
         log.error("ERROR: %s".format(reason))
         client ! StoreFileError(reason)

@@ -4,6 +4,7 @@ import java.io.{File, BufferedOutputStream, FileOutputStream}
 import java.security.MessageDigest
 
 import akka.actor.{Props, Actor, ActorLogging}
+import akka.agent.Agent
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import com.bullhorn.filestore.Codec.StoredFile
@@ -40,15 +41,13 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
   val digestActor = context.actorOf(Props[DigestActor],
     "digester_%d".format(System.identityHashCode(this)))
 
-  val storageActor = context.actorOf(StorageParentActor(db, store))
+  val storageActor = context.actorOf(StorageParentActor(store), "storage_%d".format(System.identityHashCode(this)))
 
   var cnt = 0
   var bytesWritten = 0
   val timer = Stopwatch.createStarted
 
   implicit val timeout = Timeout(90 seconds)
-
-  import ExecutionContext.Implicits.global
 
   //try creating an intermediary "responder" actor that
   //brokers between client and storageActor -- solves
@@ -67,23 +66,29 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
     }
     case e: ChunkedMessageEnd =>
       val client = sender
-      val f = for {
-        sig <- (digestActor ? GetDigest).mapTo[FileSignature]
-        dup <- (storageActor ? sig)
-      } yield {
-        log.info("done: %d chunks, %d bytes in %s".format(cnt, bytesWritten, timer.stop))
-        HttpResponse(
-          status = 200,
-          entity = HttpEntity(StoredFile(
-            fileName,
-            contentType.toString,
-            false,
-            bytesWritten,
-            sig).toJson.prettyPrint))
-      }
-      f.pipeTo(client).onComplete { f =>
-        client ! CommandWrapper(SetRequestTimeout(90.seconds)) // reset timeout to original value
-        context.stop(self)
-      }
+      context.actorOf(Props(new Actor() {
+        var sig: Option[FileSignature] = None
+
+        digestActor ! GetDigest
+        def receive = {
+          case fs: FileSignature =>
+            sig = Some(fs)
+            storageActor ! fs
+          case stored: FileStored => {
+            log.info("done: %d chunks, %d bytes in %s".format(cnt, bytesWritten, timer.stop))
+            client ! HttpResponse(
+              status = 200,
+              entity = HttpEntity(StoredFile(
+                fileName,
+                contentType.toString,
+                false,
+                bytesWritten,
+                sig.get).toJson.prettyPrint))
+            //client ! CommandWrapper(SetRequestTimeout(90.seconds)) // reset timeout to original value
+            //context.stop(self)
+          }
+        }
+      }))
+      //context.stop(self)
   }
 }

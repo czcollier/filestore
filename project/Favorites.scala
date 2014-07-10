@@ -50,6 +50,7 @@ object Favorites {
 
     // akka
     val akkaActor       = "com.typesafe.akka"         %% "akka-actor"          % Versions.akka          % "compile"
+    val akkaAgent       = "com.typesafe.akka"         %% "akka-agent"          % Versions.akka          % "compile"
     val akkaSlf4j       = "com.typesafe.akka"         %% "akka-slf4j"          % Versions.akka
     val akkaRemote      = "com.typesafe.akka"         %% "akka-remote"         % Versions.akka
 

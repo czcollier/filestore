@@ -30,6 +30,7 @@ object Build extends sbt.Build {
       ),
       libraryDependencies ++= Seq(
         Libraries.akkaActor,
+        Libraries.akkaAgent,
         Libraries.berkeleydb,
         Libraries.scalaIOFile,
         Libraries.guava,
@@ -47,7 +48,7 @@ object Build extends sbt.Build {
   )
   
   lazy val testClient = Project(
-    id = "testCient",
+    id = "testClient",
     base = file("testclient"),
     settings = standardSettings
         ++ Seq(Revolver.settings: _*)
