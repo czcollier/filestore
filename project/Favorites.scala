@@ -10,10 +10,10 @@ object Favorites {
     val spray           = "spray repo"            at "http://repo.spray.io"
     val sprayNightlies  = "spray nightlies"       at "http://nightlies.spray.io"
     val novus           = "Novus Releases"        at "http://repo.novus.com/releases"
+    val gamlor          = "Gamlor-Repo"           at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
 
     val bullhornPrivate = "Bullhorn Private Repository" at bullhornProxyRepositoryUrl + "/libs-release"
 
-    val gamlor = "Gamlor-Repo" at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
 
     // bh- repositories are for publishing only in core-services.  Other projects will use them
     // for resolving Bullhorn libs, but core-services is the source of these
@@ -45,6 +45,7 @@ object Favorites {
 
   object Libraries {
 
+    val scalaIOCore     = "com.github.scala-incubator.io" %% "scala-io-core"   % "0.4.3"
     val scalaIOFile     = "com.github.scala-incubator.io" %% "scala-io-file"   % "0.4.3"
     val gamlorAsyncIO   = "info.gamlor.akkaasync"  %% "akka-io" % "1.0-SNAPSHOT"
 

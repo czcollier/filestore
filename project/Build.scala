@@ -32,6 +32,7 @@ object Build extends sbt.Build {
         Libraries.akkaActor,
         Libraries.akkaAgent,
         Libraries.berkeleydb,
+        Libraries.scalaIOCore,
         Libraries.scalaIOFile,
         Libraries.guava,
         Libraries.sprayCan,

@@ -2,6 +2,7 @@ package com.bullhorn.filestore
 
 import akka.actor.{Actor, ActorLogging, Props}
 import com.bullhorn.filestore.PermStorageActor.FileWithSignature
+import com.bullhorn.filestore.db.FileDb
 
 object FileDbActor {
   case class StorableFile(tempName: String, id: Long)

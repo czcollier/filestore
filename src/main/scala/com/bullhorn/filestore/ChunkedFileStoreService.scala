@@ -11,7 +11,7 @@ import spray.http._
 import scala.concurrent.duration._
 
 class ChunkedFileStoreService extends Actor with ActorLogging {
-  import com.bullhorn.filestore.Resources._
+  import com.bullhorn.filestore.ResourcesStuff._
 
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
 

@@ -7,6 +7,7 @@ import com.bullhorn.filestore.JsonCodec.StoredFile
 import com.bullhorn.filestore.PermStorageActor.FileStored
 import com.bullhorn.filestore.StorageCoordinatorActor.{FileChunk, FileSignature}
 import com.bullhorn.filestore.SuspendingQueue.AckConsumed
+import com.bullhorn.filestore.storage.FileStore
 import com.google.common.base.Stopwatch
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
@@ -76,6 +77,7 @@ import scala.language.implicitConversions
           }
         }
       }))
+      //this was causing connections to be dropped.
       //context.stop(self)
   }
 }

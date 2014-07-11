@@ -1,6 +1,7 @@
 package com.bullhorn.filestore
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
+import java.util.concurrent.TimeUnit
 
 import akka.actor._
 import akka.io.{IO, Tcp}
@@ -12,6 +13,7 @@ import spray.http.HttpHeaders.RawHeader
 import spray.http.Uri.Path
 import spray.http._
 
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.Random
 
@@ -22,7 +24,7 @@ object FileStoreClient extends App {
   case object AckChunk
   case class StoreFile(data: InputStream, id: String)
   abstract class StoreFileResult
-  case class StoreFileSuccess(info: String) extends StoreFileResult
+  case class StoreFileSuccess(info: String, size: Int) extends StoreFileResult
   case class StoreFileError(info: String) extends StoreFileResult
 
   implicit val system = ActorSystem()
@@ -38,24 +40,22 @@ object FileStoreClient extends App {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit val timeout = Timeout(90 seconds)
+  implicit val timeout = Timeout(5000 minutes)
 
   val testFiles = new File(testFilesPath).listFiles
   val testCnt = testFiles.length * 5
 
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
   val tests = Stream.continually(Random.nextInt(testFiles.length)).take(testCnt)
-  for (i <- tests.zipWithIndex) {
-    try {
-      val stream = new BufferedInputStream(new FileInputStream(testFiles(i._1)))
-      coordinator ! StoreFile(stream, s"${i._2}")
-      Thread.sleep(100)
-    }
-    catch {
-      case e: Exception =>
-        println("error opening file: " + e)
-    }
+  val totalTimer = Stopwatch.createStarted
+  val testFutures = tests.zipWithIndex map { zi =>
+      val stream = new BufferedInputStream(new FileInputStream(testFiles(zi._1)))
+      (coordinator ? StoreFile(stream, s"${zi._2}")).mapTo[(Int, Int, Int, Long)]
   }
+
+  val fin = Await.result(Future.sequence(testFutures).map(x => x.toString), 500 minutes)
+
+  println(fin)
 
   object StoreFileCoordinator {
     case object Tick
@@ -69,24 +69,34 @@ object FileStoreClient extends App {
     var lastTick = System.currentTimeMillis
     var lastCount = 0
 
+    var flightTime = 0L
+    var totalBytes = 0
+
     def doneCount = successCount + failCount
 
-    val ticker = context.system.scheduler.schedule(3 seconds, 3 seconds, self, Tick)
+    private def handleResponse(t: Stopwatch, r: StoreFileResult): (Int, Int, Int, Long) = {
+      t.stop
+      successCount += 1
+      flightTime += t.elapsed(TimeUnit.MILLISECONDS)
+      r match {
+        case StoreFileSuccess(info, size) => {
+          successCount += 1
+          totalBytes += size
+        }
+        case _ => failCount += 1
+      }
+      log.info("%s: %d/%d/%d in %s".format(r, successCount, failCount, testCnt, t.toString))
+      (successCount, failCount, testCnt, t.elapsed(TimeUnit.MILLISECONDS))
+    }
+
+    val ticker = context.system.scheduler.schedule(1 seconds, 1 seconds, self, Tick)
     def receive = {
       case sf: StoreFile =>
         val worker = context.actorOf(Props(new StoreFileWorker), "storeFileWorker_%s".format(sf.id))
         log.info("storing: %s.".format(sf.id))
         val timer = Stopwatch.createStarted
         (worker ? sf).collect {
-          case s: StoreFileSuccess =>
-            successCount += 1
-            log.info("SUCCESS: %d/%d/%d in %s".format(successCount, failCount, testCnt, timer.toString))
-          case f: StoreFileError =>
-            failCount += 1
-            log.info("FAIL: %d/%d/%d".format(successCount, failCount, testCnt))
-          case x =>
-            failCount += 1
-            log.info("FAIL: unexpected response: %s".format(x.toString))
+          case s: StoreFileResult => handleResponse(timer, s)
         }
       case Tick =>
         log.info("---->> TICK: %d/%d uploads completed".format(doneCount, testCnt))
@@ -147,7 +157,7 @@ object FileStoreClient extends App {
       case response@HttpResponse(status, entity, _, _) =>
         val server = sender
         //log.info("sent file #%s of %d bytes in %s".format(cnt.get, bSent, timer.stop))
-        client ! StoreFileSuccess(entity.asString)
+        client ! StoreFileSuccess(entity.asString, bSent)
         server ! Http.Close
       case Http.Closed =>
         log.debug("connection for %s closed".format(cnt.get))

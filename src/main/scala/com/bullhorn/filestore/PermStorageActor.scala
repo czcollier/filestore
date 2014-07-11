@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorLogging, Props}
 import akka.pattern.pipe
 import com.bullhorn.filestore.FileDbActor.{DuplicateFile, StorableFile}
 import com.bullhorn.filestore.PermStorageActor.{FileStored, FileWithSignature}
+import com.bullhorn.filestore.storage.FileStore
 
 object PermStorageActor {
   case class FileStored(name: String)
@@ -15,7 +16,7 @@ class PermStorageActor(
         store: FileStore)
     extends Actor with ActorLogging {
 
-  val dbActor = context.actorOf(FileDbActor(Resources.db))
+  val dbActor = context.actorOf(FileDbActor(ResourcesStuff.db))
 
   implicit val ec = context.dispatcher
 
@@ -26,9 +27,9 @@ class PermStorageActor(
         dbActor ! fs
         def receive = {
           case StorableFile(n, id) =>
-            log.info("got storable file: %s".format(n.toString))
+            log.debug("got file info from db: %s".format(n.toString))
             val x = store.moveToPerm(n, id) map { f: String =>
-              log.info("stored file: %s".format(f.toString))
+              log.debug("stored file: %s".format(f.toString))
               FileStored(f)
             }
             x.pipeTo(topSender)
@@ -36,8 +37,8 @@ class PermStorageActor(
 
           case DuplicateFile(f) =>
             val logg = log
-            store.deleteTempFile(f)
-            logg.info("deleted temp file: %s".format(f.toString))
+            store.deleteTemp(f)
+            logg.debug("deleted temp file: %s".format(f.toString))
             topSender ! FileStored(f)
             context.stop(self)
         }
