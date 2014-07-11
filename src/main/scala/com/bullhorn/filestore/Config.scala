@@ -9,6 +9,13 @@ object Config {
 
   val config = ConfigFactory.load()
 
-  val baseDir = config.getString(withKeyPrefix("store.basedir"))
-  val tmpDir = config.getString(withKeyPrefix("store.tempdir"))
+  object FileStore {
+    val baseDir = config.getString(withKeyPrefix("store.basedir"))
+    val tmpDir = config.getString(withKeyPrefix("store.tempdir"))
+  }
+
+  object SuspendingQueue {
+    val suspendThreshold = config.getInt(withKeyPrefix("suspendingQueue.suspendThreshold"))
+    val resumeThreshold = config.getInt(withKeyPrefix("suspendingQueue.resumeThreshold"))
+  }
 }

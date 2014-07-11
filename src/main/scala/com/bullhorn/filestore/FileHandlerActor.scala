@@ -15,11 +15,11 @@ import spray.io.CommandWrapper
 
 import scala.concurrent.duration._
 
-object FileWriterActor {
+object FileHandlerActor {
   object FileNameHeader extends RawHeader("file-name", "fn")
 }
 
-class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Actor with ActorLogging {
+class FileHandlerActor(store: FileStore, start: ChunkedRequestStart) extends Actor with ActorLogging {
   import com.bullhorn.filestore.JsonCodec.FileStoreJsonProtocol._
   import spray.json._
   import start.request._
@@ -34,9 +34,10 @@ import scala.language.implicitConversions
   val digestActor = context.actorOf(Props[DigestActor],
     "digester_%d".format(System.identityHashCode(this)))
 
-  val storageActor = context.actorOf(StorageCoordinatorActor(store), "storage_%d".format(System.identityHashCode(this)))
+  val storageActor = context.actorOf(StorageCoordinatorActor(store),
+    "storage_%d".format(System.identityHashCode(this)))
 
-  var cnt = 0
+  var chunkCount = 0
   var bytesWritten = 0
   val timer = Stopwatch.createStarted
 
@@ -48,7 +49,7 @@ import scala.language.implicitConversions
       val fChunk = FileChunk(chunk.data.toByteArray)
       digestActor ! fChunk
       storageActor ! fChunk
-      cnt += 1
+      chunkCount += 1
       bytesWritten += fChunk.bytes.length
       client ! AckConsumed(fChunk.bytes.length)
     }
@@ -63,7 +64,7 @@ import scala.language.implicitConversions
             sig = Some(fs)
             storageActor ! fs
           case stored: FileStored => {
-            log.info("done: %d chunks, %d bytes in %s".format(cnt, bytesWritten, timer.stop))
+            log.debug("file stored: %d chunks, %d bytes in %s".format(chunkCount, bytesWritten, timer.stop))
             client ! HttpResponse(
               status = 200,
               entity = HttpEntity(StoredFile(

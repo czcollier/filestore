@@ -29,7 +29,7 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
       val parts = r.asPartStream()
       val assumedStart = parts.head
 
-      val worker = context.actorOf(Props(new FileWriterActor(store, assumedStart.asInstanceOf[ChunkedRequestStart])))
+      val worker = context.actorOf(Props(new FileHandlerActor(store, assumedStart.asInstanceOf[ChunkedRequestStart])))
       val queue = context.actorOf(Props(new SuspendingQueue(client, worker)))
 
       client ! RegisterChunkHandler(queue)
@@ -37,7 +37,7 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
 
     case s@ChunkedRequestStart(HttpRequest(POST, Uri.Path("/file-upload"), _, _, _)) =>
       val client = sender
-      val worker = context.actorOf(Props(new FileWriterActor(store, s)))
+      val worker = context.actorOf(Props(new FileHandlerActor(store, s)))
       val queue = context.actorOf(Props(new SuspendingQueue(client, worker)))
 
       client ! RegisterChunkHandler(queue)

@@ -7,9 +7,7 @@ import com.bullhorn.filestore.db.FileDb
 
 import scala.concurrent.{ExecutionContext, Future, future}
 
-class StdIOFileStore(db: FileDb) extends FileStore {
-
-  override def newTempFile: String = withTempDir(db.newTempFileId)
+class StdIOFileStore(db: FileDb) extends FileStore(db) {
 
   override def moveToPerm(tempName: String, id: Long)(implicit ec: ExecutionContext): Future[String] = {
     val permFile = new File(withPermDir(formatPermFileName(id)))
