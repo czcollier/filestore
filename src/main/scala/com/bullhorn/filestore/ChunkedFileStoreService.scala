@@ -1,19 +1,17 @@
 package com.bullhorn.filestore
 
-
+import akka.actor._
+import akka.util.Timeout
 import com.bullhorn.filestore.SuspendingQueue.AckConsumed
+import spray.can.Http
+import spray.can.Http.RegisterChunkHandler
+import spray.http.HttpMethods._
+import spray.http._
 
 import scala.concurrent.duration._
-import akka.util.Timeout
-import akka.actor._
-import spray.can.Http
-import spray.http._
-import HttpMethods._
-import spray.can.Http.RegisterChunkHandler
-
 
 class ChunkedFileStoreService extends Actor with ActorLogging {
-  import Resources._
+  import com.bullhorn.filestore.Resources._
 
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
 

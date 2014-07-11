@@ -3,7 +3,7 @@ package com.bullhorn.filestore
 import java.security.MessageDigest
 
 import akka.actor.{Actor, ActorLogging}
-import com.bullhorn.filestore.StorageParentActor.{FileChunk, FileSignature}
+import com.bullhorn.filestore.StorageCoordinatorActor.{FileChunk, FileSignature}
 
 object DigestActor {
   case object GetDigest
@@ -26,7 +26,5 @@ class DigestActor extends Actor with ActorLogging {
 
     case GetDigest =>
       sender ! FileSignature(hexEncode(digest.digest))
-
-    case x => log.info("===> OOPS: digester got: %s".format(x.toString))
   }
 }

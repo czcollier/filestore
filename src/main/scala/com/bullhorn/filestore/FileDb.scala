@@ -65,7 +65,7 @@ class BerkeleyFileDb extends FileDb {
   storeConfig.setTransactional(true)
   val store = new EntityStore(env, "files", storeConfig)
 
-  val primaryIndex = store.getPrimaryIndex(classOf[java.lang.Long], classOf[FileRecord])
+  val primaryIndex = store.getPrimaryIndex(classOf[java.lang.Long], classOf[BdbFileRecord])
   val keyIndex = store.getSecondaryIndex(primaryIndex, classOf[String], "signature")
 
   store.setSequenceConfig("pk", SequenceConfig.DEFAULT)

@@ -17,6 +17,8 @@ class PermStorageActor(
 
   val dbActor = context.actorOf(FileDbActor(Resources.db))
 
+  implicit val ec = context.dispatcher
+
   def receive = {
     case fs: FileWithSignature =>
       val topSender = sender

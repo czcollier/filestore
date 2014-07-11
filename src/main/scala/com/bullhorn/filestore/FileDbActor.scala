@@ -1,9 +1,7 @@
 package com.bullhorn.filestore
 
-import akka.actor.{Props, Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, Props}
 import com.bullhorn.filestore.PermStorageActor.FileWithSignature
-
-import scala.concurrent.Future
 
 object FileDbActor {
   case class StorableFile(tempName: String, id: Long)
@@ -13,7 +11,7 @@ object FileDbActor {
 }
 
 class FileDbActor(db: FileDb) extends Actor with ActorLogging {
-  import FileDbActor._
+  import com.bullhorn.filestore.FileDbActor._
   implicit val ec = context.dispatcher
 
   def receive = {

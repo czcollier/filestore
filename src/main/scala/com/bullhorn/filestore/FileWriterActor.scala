@@ -1,38 +1,30 @@
 package com.bullhorn.filestore
 
-import java.io.{File, BufferedOutputStream, FileOutputStream}
-import java.security.MessageDigest
-
-import akka.actor.{Props, Actor, ActorLogging}
-import akka.agent.Agent
-import akka.pattern.{ ask, pipe }
+import akka.actor.{Actor, ActorLogging, Props}
 import akka.util.Timeout
-import com.bullhorn.filestore.Codec.StoredFile
-import com.bullhorn.filestore.DigestActor.{BytesConsumed, GetDigest}
+import com.bullhorn.filestore.DigestActor.GetDigest
+import com.bullhorn.filestore.JsonCodec.StoredFile
 import com.bullhorn.filestore.PermStorageActor.FileStored
-import com.bullhorn.filestore.StorageParentActor.{FileChunk, FileSignature}
+import com.bullhorn.filestore.StorageCoordinatorActor.{FileChunk, FileSignature}
 import com.bullhorn.filestore.SuspendingQueue.AckConsumed
 import com.google.common.base.Stopwatch
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
 import spray.io.CommandWrapper
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scalax.io.{End, Resource}
 
 object FileWriterActor {
   object FileNameHeader extends RawHeader("file-name", "fn")
 }
 
 class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Actor with ActorLogging {
-  import com.bullhorn.filestore.FileWriterActor._
-  import start.request._
+  import com.bullhorn.filestore.JsonCodec.FileStoreJsonProtocol._
   import spray.json._
-  import Codec.FileStoreJsonProtocol._
-  import scala.language.implicitConversions
-  import Resources._
-  
+  import start.request._
+
+import scala.language.implicitConversions
+
   val contentType = header[HttpHeaders.`Content-Type`].getOrElse(ContentTypes.`text/plain(UTF-8)`)
   val fileName = start.message.headers.find(h => h.name == "file-name").map { hdr =>
     hdr.value
@@ -41,7 +33,7 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
   val digestActor = context.actorOf(Props[DigestActor],
     "digester_%d".format(System.identityHashCode(this)))
 
-  val storageActor = context.actorOf(StorageParentActor(store), "storage_%d".format(System.identityHashCode(this)))
+  val storageActor = context.actorOf(StorageCoordinatorActor(store), "storage_%d".format(System.identityHashCode(this)))
 
   var cnt = 0
   var bytesWritten = 0
@@ -49,11 +41,6 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
 
   implicit val timeout = Timeout(90 seconds)
 
-  //try creating an intermediary "responder" actor that
-  //brokers between client and storageActor -- solves
-  //the problem of maintaining connection betw. client
-  //and storage actor that must respond to client when
-  //done with work
   def receive = {
     case chunk: MessageChunk => {
       val client = sender
@@ -85,7 +72,7 @@ class FileWriterActor(store: FileStore, start: ChunkedRequestStart) extends Acto
                 bytesWritten,
                 sig.get).toJson.prettyPrint))
             client ! CommandWrapper(SetRequestTimeout(90.seconds)) // reset timeout to original value
-            //context.stop(self)
+            context.stop(self)
           }
         }
       }))

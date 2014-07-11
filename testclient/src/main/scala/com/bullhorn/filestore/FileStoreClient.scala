@@ -1,21 +1,19 @@
 package com.bullhorn.filestore
 
-import java.io.{File, BufferedInputStream, FileInputStream, InputStream}
+import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
 
 import akka.actor._
 import akka.io.{IO, Tcp}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.bullhorn.filestore.FileStoreClient.AckChunk
 import com.google.common.base.Stopwatch
 import spray.can.Http
 import spray.http.HttpHeaders.RawHeader
 import spray.http.Uri.Path
 import spray.http._
+
 import scala.concurrent.duration._
-import scala.concurrent.Future
-import util.Random
-import scala.collection.JavaConversions._
+import scala.util.Random
 
 
 object FileStoreClient extends App {
@@ -29,18 +27,18 @@ object FileStoreClient extends App {
 
   implicit val system = ActorSystem()
 
-  val bufSize = system.settings.config.getInt(
+  def bufSize = system.settings.config.getInt(
     "com.bullhorn.filestore.client.chunkSize")
 
-  val serverURI = Uri(system.settings.config.getString(
+  def serverURI = Uri(system.settings.config.getString(
     "com.bullhorn.filestore.client.serverURI"))
+
+  def testFilesPath = system.settings.config.getString(
+    "com.bullhorn.filestore.client.testFileDir")
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  //val storeClient = system.actorOf(Props[StoreFileActor])
-  implicit val timeout = Timeout(1000 seconds)
-
-  val testFilesPath = "/home/ccollier/Pictures/tests"
+  implicit val timeout = Timeout(90 seconds)
 
   val testFiles = new File(testFilesPath).listFiles
   val testCnt = testFiles.length * 5
@@ -51,7 +49,7 @@ object FileStoreClient extends App {
     try {
       val stream = new BufferedInputStream(new FileInputStream(testFiles(i._1)))
       coordinator ! StoreFile(stream, s"${i._2}")
-      Thread.sleep(1000)
+      Thread.sleep(100)
     }
     catch {
       case e: Exception =>
@@ -64,7 +62,7 @@ object FileStoreClient extends App {
   }
 
   class StoreFileCoordinator extends Actor with ActorLogging {
-    import StoreFileCoordinator._
+    import com.bullhorn.filestore.FileStoreClient.StoreFileCoordinator._
 
     var successCount = 0
     var failCount = 0
@@ -82,16 +80,16 @@ object FileStoreClient extends App {
         (worker ? sf).collect {
           case s: StoreFileSuccess =>
             successCount += 1
-            log.info("SUCC: %d/%d/%s".format(successCount, failCount, timer.toString))
+            log.info("SUCCESS: %d/%d/%d in %s".format(successCount, failCount, testCnt, timer.toString))
           case f: StoreFileError =>
             failCount += 1
             log.info("FAIL: %d/%d/%d".format(successCount, failCount, testCnt))
           case x =>
             failCount += 1
-            log.info("??? %s".format(x.toString))
+            log.info("FAIL: unexpected response: %s".format(x.toString))
         }
       case Tick =>
-        log.info("%d/%d uploads completed".format(doneCount, testCnt))
+        log.info("---->> TICK: %d/%d uploads completed".format(doneCount, testCnt))
         log.info("done: %d, last: %d".format(doneCount, lastCount))
         if ((doneCount - lastCount) < 1) {
           if (context != null)

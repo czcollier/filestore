@@ -1,10 +1,10 @@
 package com.bullhorn.filestore
 
-import com.bullhorn.filestore.StorageParentActor.FileSignature
+import com.bullhorn.filestore.StorageCoordinatorActor.FileSignature
 import spray.httpx.unmarshalling.DeserializationError
 import spray.json._
 
-object Codec {
+object JsonCodec {
 
   case class StoredFile(
    name: String,

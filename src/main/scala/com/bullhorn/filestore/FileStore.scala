@@ -7,13 +7,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class FileStore(db: FileDb) {
 
-  val config = ConfigFactory.load()
-
-  val baseDir = config.getString("com.bullhorn.filestore.store.basedir")
-  val tmpDir = config.getString("com.bullhorn.filestore.store.tempdir")
-
-  private def withTempDir(fname: String) = "%s/%s".format(tmpDir, fname)
-  private def withPermDir(fname: String) = "%s/%s/%s".format(baseDir, "files", fname)
+  private def withTempDir(fname: String) = "%s/%s".format(Config.tmpDir, fname)
+  private def withPermDir(fname: String) = "%s/%s/%s".format(Config.baseDir, "files", fname)
 
   private def formatPermFileName(id: Long) = "%010d".format(id)
 
@@ -36,4 +31,3 @@ class FileStore(db: FileDb) {
     future { new File(tempName).delete() }
   }
 }
-

@@ -5,7 +5,7 @@ import java.io.{FileOutputStream, BufferedOutputStream}
 import akka.actor.{Props, ActorRef, Actor, ActorLogging}
 import akka.util.Timeout
 import com.bullhorn.filestore.PermStorageActor.FileWithSignature
-import com.bullhorn.filestore.StorageParentActor.{FileSignature, FileChunk}
+import com.bullhorn.filestore.StorageCoordinatorActor.{FileSignature, FileChunk}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
