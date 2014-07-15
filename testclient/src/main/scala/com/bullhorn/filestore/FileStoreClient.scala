@@ -22,7 +22,7 @@ object FileStoreClient extends App {
   case object StartTest
   case object AckChunksStart
   case object AckChunk
-  case class StoreFile(data: InputStream, id: String)
+  case class StoreFile(data: InputStream, id: String, time: Long)
   abstract class StoreFileResult
   case class StoreFileSuccess(info: String, size: Int) extends StoreFileResult
   case class StoreFileError(info: String) extends StoreFileResult
@@ -48,9 +48,10 @@ object FileStoreClient extends App {
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
   val tests = Stream.continually(Random.nextInt(testFiles.length)).take(testCnt)
   val totalTimer = Stopwatch.createStarted
+
   val testFutures = tests.zipWithIndex map { zi =>
       val stream = new BufferedInputStream(new FileInputStream(testFiles(zi._1)))
-      (coordinator ? StoreFile(stream, s"${zi._2}")).mapTo[(Int, Int, Int, Long)]
+      (coordinator ? StoreFile(stream, s"${zi._2}", System.currentTimeMillis)).mapTo[(Int, Int, Int, Long)]
   }
 
   val fin = Await.result(Future.sequence(testFutures).map(x => x.toString), 500 minutes)
@@ -74,10 +75,8 @@ object FileStoreClient extends App {
 
     def doneCount = successCount + failCount
 
-    private def handleResponse(t: Stopwatch, r: StoreFileResult): (Int, Int, Int, Long) = {
-      t.stop
+    private def handleResponse(r: StoreFileResult): (Int, Int, Int, Long) = {
       successCount += 1
-      flightTime += t.elapsed(TimeUnit.MILLISECONDS)
       r match {
         case StoreFileSuccess(info, size) => {
           successCount += 1
@@ -92,12 +91,10 @@ object FileStoreClient extends App {
     val ticker = context.system.scheduler.schedule(1 seconds, 1 seconds, self, Tick)
     def receive = {
       case sf: StoreFile =>
-        val worker = context.actorOf(Props(new StoreFileWorker), "storeFileWorker_%s".format(sf.id))
         log.info("storing: %s.".format(sf.id))
-        val timer = Stopwatch.createStarted
-        (worker ? sf).collect {
-          case s: StoreFileResult => handleResponse(timer, s)
-        }
+        val worker = context.actorOf(Props(new StoreFileWorker), "storeFileWorker_%s".format(sf.id))
+        worker ! sf
+      case r: StoreFileResult => handleResponse(r)
       case Tick =>
         log.info("---->> TICK: %d/%d uploads completed".format(doneCount, testCnt))
         log.info("done: %d, last: %d".format(doneCount, lastCount))
