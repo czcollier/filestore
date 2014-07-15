@@ -27,9 +27,8 @@ class PermStorageActor(
         dbActor ! fs
         def receive = {
           case StorableFile(n, id) =>
-            log.debug("got file info from db: %s".format(n.toString))
             val x = store.moveToPerm(n, id) map { f: String =>
-              log.debug("stored file: %s".format(f.toString))
+              log.debug("stored new file: %s".format(f.toString))
               FileStored(f)
             }
             x.pipeTo(topSender)
@@ -38,7 +37,7 @@ class PermStorageActor(
           case DuplicateFile(f) =>
             val logg = log
             store.deleteTemp(f)
-            logg.debug("deleted temp file: %s".format(f.toString))
+            logg.debug("deleted dup temp file: %s".format(f.toString))
             topSender ! FileStored(f)
             context.stop(self)
         }
