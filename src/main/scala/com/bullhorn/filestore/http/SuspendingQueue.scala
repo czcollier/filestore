@@ -1,7 +1,8 @@
-package com.bullhorn.filestore
+package com.bullhorn.filestore.http
 
 import akka.actor._
 import akka.io.Tcp.{ResumeReading, SuspendReading}
+import com.bullhorn.filestore.Config
 import spray.http._
 import spray.io.CommandWrapper
 
@@ -12,7 +13,6 @@ import scala.concurrent.duration._
  * MessageChunks and requires `AckConsumed` acknowledgements to manage the workers queue size.
  */
 class SuspendingQueue(client: ActorRef, worker: ActorRef) extends Actor with ActorLogging {
-  import com.bullhorn.filestore.SuspendingQueue._
 
   var unackedBytes = 0L
   var suspended = false

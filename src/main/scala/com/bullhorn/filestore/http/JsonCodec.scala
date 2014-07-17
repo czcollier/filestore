@@ -1,7 +1,6 @@
-package com.bullhorn.filestore
+package com.bullhorn.filestore.http
 
 import com.bullhorn.filestore.StorageCoordinatorActor.FileSignature
-import spray.httpx.unmarshalling.DeserializationError
 import spray.json._
 
 object JsonCodec {

@@ -3,10 +3,11 @@ package com.bullhorn.filestore
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.util.Timeout
 import com.bullhorn.filestore.DigestActor.GetDigest
-import com.bullhorn.filestore.JsonCodec.StoredFile
+import com.bullhorn.filestore.http.{SuspendingQueue, JsonCodec}
+import JsonCodec.StoredFile
 import com.bullhorn.filestore.PermStorageActor.FileStored
 import com.bullhorn.filestore.StorageCoordinatorActor.{FileChunk, FileSignature}
-import com.bullhorn.filestore.SuspendingQueue.AckConsumed
+import SuspendingQueue.AckConsumed
 import com.bullhorn.filestore.storage.FileStore
 import com.google.common.base.Stopwatch
 import spray.http.HttpHeaders.RawHeader
@@ -20,7 +21,7 @@ object FileHandlerActor {
 }
 
 class FileHandlerActor(store: FileStore, start: ChunkedRequestStart) extends Actor with ActorLogging {
-  import com.bullhorn.filestore.JsonCodec.FileStoreJsonProtocol._
+  import JsonCodec.FileStoreJsonProtocol._
   import spray.json._
   import start.request._
 

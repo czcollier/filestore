@@ -2,6 +2,7 @@ package com.bullhorn.filestore
 
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.io.IO
+import com.bullhorn.filestore.http.ChunkedFileStoreService
 import spray.can.Http
 
 object Boot extends App {

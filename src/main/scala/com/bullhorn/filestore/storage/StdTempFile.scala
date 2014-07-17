@@ -1,12 +1,14 @@
 package com.bullhorn.filestore.storage
 
 import java.io.{FileOutputStream, BufferedOutputStream}
-
 import scala.concurrent.{ExecutionContext, Future, future}
 
-class StdTempFile(path: String)(implicit ctx: ExecutionContext) extends TempFile {
+class StdTempFile(pth: String)(implicit ctx: ExecutionContext) extends TempFile {
 
-  val os = new BufferedOutputStream(new FileOutputStream((path)))
+  val os = new BufferedOutputStream(new FileOutputStream((pth)))
+
+  override var path = pth
+
   override def write(data: Array[Byte]): Future[Int] = {
     future {
       os.write(data)

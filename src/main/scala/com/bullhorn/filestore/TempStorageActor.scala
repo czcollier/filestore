@@ -4,7 +4,7 @@ import akka.actor._
 import com.bullhorn.filestore.PermStorageActor.FileWithSignature
 import com.bullhorn.filestore.StorageCoordinatorActor.{FileChunk, FileSignature}
 import com.bullhorn.filestore.TempStorageActor.WriteDone
-import com.bullhorn.filestore.storage.{AsyncTempFile, FileStore}
+import com.bullhorn.filestore.storage.FileStore
 
 import scala.concurrent.ExecutionContext
 
@@ -16,8 +16,7 @@ object TempStorageActor {
 class TempStorageActor(store: FileStore) extends Actor with ActorLogging with Stash {
   implicit val ec: ExecutionContext = context.dispatcher
 
-  val tmpFile = store.newTempFile
-  val atf = new AsyncTempFile(tmpFile)
+  val tempFile = ResourcesStuff.tempStorage.newTempFile
 
   def receive = {
     case FileChunk(bytes) => {
@@ -25,8 +24,8 @@ class TempStorageActor(store: FileStore) extends Actor with ActorLogging with St
         case WriteDone(l) => context.unbecome(); unstashAll()
         case msg => stash()
       })
-      atf.write(bytes).map { l =>
-        log.debug("atf wrote %d bytes".format(l))
+      tempFile.write(bytes).map { l =>
+        log.debug("wrote %d bytes to temp file %s".format(l, tempFile.path))
         self ! WriteDone(l)
       }
     }
@@ -35,8 +34,8 @@ class TempStorageActor(store: FileStore) extends Actor with ActorLogging with St
     }
     case FileSignature(fileSig) =>
       val client = sender
-      atf.close()
-      client ! FileWithSignature(fileSig, tmpFile)
+      tempFile.close()
+      client ! FileWithSignature(fileSig, tempFile.path)
       context.stop(self)
   }
 }

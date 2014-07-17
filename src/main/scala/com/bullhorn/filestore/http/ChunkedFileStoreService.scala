@@ -1,8 +1,9 @@
-package com.bullhorn.filestore
+package com.bullhorn.filestore.http
 
 import akka.actor._
 import akka.util.Timeout
-import com.bullhorn.filestore.SuspendingQueue.AckConsumed
+import SuspendingQueue.AckConsumed
+import com.bullhorn.filestore.FileHandlerActor
 import spray.can.Http
 import spray.can.Http.RegisterChunkHandler
 import spray.http.HttpMethods._

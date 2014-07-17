@@ -6,7 +6,7 @@ import com.bullhorn.filestore.db.FileDb
 
 import scala.concurrent.{ExecutionContext, Future, future}
 
-class NIOFileStore(db: FileDb) extends FileStore(db) {
+class NIOFileStore extends FileStore {
 
   override def deleteTemp(tempName: String)(implicit ec: ExecutionContext): Unit = {
     Future { Files.delete(Paths.get(tempName)) }
