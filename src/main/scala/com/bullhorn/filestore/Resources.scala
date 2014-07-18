@@ -5,7 +5,7 @@ import com.bullhorn.filestore.fs.nio.NIOFileStore
 import com.bullhorn.filestore.fs.oldio.StdIOFileStore
 import com.bullhorn.filestore.fs.{TempStorage, FileStore}
 
-object ResourcesFoo {
+object Resources {
   val db: FileDb = new BerkeleyFileDb
   val store: FileStore = new NIOFileStore
   val tempStorage = new TempStorage

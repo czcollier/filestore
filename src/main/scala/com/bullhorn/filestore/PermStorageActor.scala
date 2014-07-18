@@ -16,7 +16,7 @@ class PermStorageActor(
         store: FileStore)
     extends Actor with ActorLogging {
 
-  val dbActor = context.actorOf(FileDbActor(ResourcesFoo.db))
+  val dbActor = context.actorOf(FileDbActor(Resources.db))
 
   implicit val ec = context.dispatcher
 

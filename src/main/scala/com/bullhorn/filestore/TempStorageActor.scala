@@ -16,7 +16,7 @@ object TempStorageActor {
 class TempStorageActor(store: FileStore) extends Actor with ActorLogging with Stash {
   implicit val ec: ExecutionContext = context.dispatcher
 
-  val tempFile = ResourcesFoo.tempStorage.newTempFile
+  val tempFile = Resources.tempStorage.newTempFile
 
   def receive = {
     case FileChunk(bytes) => {
