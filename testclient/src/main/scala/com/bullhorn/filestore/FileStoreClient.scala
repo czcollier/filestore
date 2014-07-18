@@ -45,18 +45,19 @@ object FileStoreClient extends App {
   val testFiles = new File(testFilesPath).listFiles
   val testCnt = testFiles.length * 5
 
+  println("testing with %d files over %d runs".format(testFiles.length, testCnt))
+
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
   val tests = Stream.continually(Random.nextInt(testFiles.length)).take(testCnt)
   val totalTimer = Stopwatch.createStarted
 
-  val testFutures = tests.zipWithIndex map { zi =>
+  tests.zipWithIndex foreach { zi =>
       val stream = new BufferedInputStream(new FileInputStream(testFiles(zi._1)))
-      (coordinator ? StoreFile(stream, s"${zi._2}", System.currentTimeMillis)).mapTo[(Int, Int, Int, Long)]
+      println("sending: %s".format(zi._2))
+      (coordinator ? StoreFile(stream, s"${zi._2}", System.currentTimeMillis))
+        .mapTo[(Int, Int, Int, Long)]
+        .map(x => println(x.toString))
   }
-
-  val fin = Await.result(Future.sequence(testFutures).map(x => x.toString), 500 minutes)
-
-  println(fin)
 
   object StoreFileCoordinator {
     case object Tick
@@ -75,7 +76,7 @@ object FileStoreClient extends App {
 
     def doneCount = successCount + failCount
 
-    private def handleResponse(r: StoreFileResult): (Int, Int, Int, Long) = {
+    private def handleResponse(r: StoreFileResult): (Int, Int, Int) = {
       successCount += 1
       r match {
         case StoreFileSuccess(info, size) => {
@@ -84,8 +85,8 @@ object FileStoreClient extends App {
         }
         case _ => failCount += 1
       }
-      log.info("%s: %d/%d/%d in %s".format(r, successCount, failCount, testCnt, t.toString))
-      (successCount, failCount, testCnt, t.elapsed(TimeUnit.MILLISECONDS))
+      log.info("%s: %d/%d/%d".format(r, successCount, failCount, testCnt))
+      (successCount, failCount, testCnt)
     }
 
     val ticker = context.system.scheduler.schedule(1 seconds, 1 seconds, self, Tick)
@@ -140,7 +141,7 @@ object FileStoreClient extends App {
     }
 
     def receive = {
-      case StoreFile(stream, idx) =>
+      case StoreFile(stream, idx, time) =>
         client = sender
         timer.start
         inStream = Some(stream)

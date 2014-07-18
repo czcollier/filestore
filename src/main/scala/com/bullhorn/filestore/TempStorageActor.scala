@@ -4,7 +4,7 @@ import akka.actor._
 import com.bullhorn.filestore.PermStorageActor.FileWithSignature
 import com.bullhorn.filestore.StorageCoordinatorActor.{FileChunk, FileSignature}
 import com.bullhorn.filestore.TempStorageActor.WriteDone
-import com.bullhorn.filestore.storage.FileStore
+import com.bullhorn.filestore.fs.FileStore
 
 import scala.concurrent.ExecutionContext
 
@@ -16,7 +16,7 @@ object TempStorageActor {
 class TempStorageActor(store: FileStore) extends Actor with ActorLogging with Stash {
   implicit val ec: ExecutionContext = context.dispatcher
 
-  val tempFile = ResourcesStuff.tempStorage.newTempFile
+  val tempFile = ResourcesFoo.tempStorage.newTempFile
 
   def receive = {
     case FileChunk(bytes) => {

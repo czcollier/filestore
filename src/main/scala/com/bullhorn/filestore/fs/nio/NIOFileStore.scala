@@ -1,8 +1,8 @@
-package com.bullhorn.filestore.storage
+package com.bullhorn.filestore.fs.nio
 
-import java.nio.file.{Paths, Files}
+import java.nio.file.{Files, Paths}
 
-import com.bullhorn.filestore.db.FileDb
+import com.bullhorn.filestore.fs.FileStore
 
 import scala.concurrent.{ExecutionContext, Future, future}
 

@@ -3,7 +3,7 @@ package com.bullhorn.filestore
 import akka.actor.{Props, ActorLogging, Actor}
 import com.bullhorn.filestore.PermStorageActor.{FileWithSignature, FileStored}
 import com.bullhorn.filestore.StorageCoordinatorActor.{FileSignature, FileChunk}
-import com.bullhorn.filestore.storage.FileStore
+import com.bullhorn.filestore.fs.FileStore
 
 object StorageCoordinatorActor {
   case class FileSignature(v: String)

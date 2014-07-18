@@ -3,6 +3,7 @@ package com.bullhorn.filestore.http
 import akka.actor._
 import akka.io.Tcp.{ResumeReading, SuspendReading}
 import com.bullhorn.filestore.Config
+import com.bullhorn.filestore.http.SuspendingQueue.AckConsumed
 import spray.http._
 import spray.io.CommandWrapper
 

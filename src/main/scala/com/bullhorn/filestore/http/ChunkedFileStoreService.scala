@@ -3,7 +3,7 @@ package com.bullhorn.filestore.http
 import akka.actor._
 import akka.util.Timeout
 import SuspendingQueue.AckConsumed
-import com.bullhorn.filestore.FileHandlerActor
+import com.bullhorn.filestore.{ResourcesFoo, FileHandlerActor}
 import spray.can.Http
 import spray.can.Http.RegisterChunkHandler
 import spray.http.HttpMethods._
@@ -12,7 +12,6 @@ import spray.http._
 import scala.concurrent.duration._
 
 class ChunkedFileStoreService extends Actor with ActorLogging {
-  import com.bullhorn.filestore.ResourcesStuff._
 
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
 
@@ -30,7 +29,7 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
       val parts = r.asPartStream()
       val assumedStart = parts.head
 
-      val worker = context.actorOf(Props(new FileHandlerActor(store, assumedStart.asInstanceOf[ChunkedRequestStart])))
+      val worker = context.actorOf(Props(new FileHandlerActor(ResourcesFoo.store, assumedStart.asInstanceOf[ChunkedRequestStart])))
       val queue = context.actorOf(Props(new SuspendingQueue(client, worker)))
 
       client ! RegisterChunkHandler(queue)
@@ -38,7 +37,7 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
 
     case s@ChunkedRequestStart(HttpRequest(POST, Uri.Path("/file-upload"), _, _, _)) =>
       val client = sender
-      val worker = context.actorOf(Props(new FileHandlerActor(store, s)))
+      val worker = context.actorOf(Props(new FileHandlerActor(ResourcesFoo.store, s)))
       val queue = context.actorOf(Props(new SuspendingQueue(client, worker)))
 
       client ! RegisterChunkHandler(queue)

@@ -1,8 +1,9 @@
-package com.bullhorn.filestore.storage
+package com.bullhorn.filestore.fs.nio
+
+import java.util.Collections
+import java.util.concurrent.{AbstractExecutorService, TimeUnit}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
-import java.util.concurrent.{ AbstractExecutorService, TimeUnit }
-import java.util.Collections
 
 object ExecutionContextExecutorServiceMunge {
   def apply(ec: ExecutionContext): ExecutionContextExecutorService = ec match {

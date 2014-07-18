@@ -1,8 +1,8 @@
-package com.bullhorn.filestore.storage
+package com.bullhorn.filestore.fs.oldio
 
 import java.io.File
 
-import com.bullhorn.filestore.db.FileDb
+import com.bullhorn.filestore.fs.FileStore
 
 import scala.concurrent.{ExecutionContext, Future, future}
 

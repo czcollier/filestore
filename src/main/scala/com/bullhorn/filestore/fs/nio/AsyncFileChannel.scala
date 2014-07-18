@@ -1,12 +1,13 @@
-package com.bullhorn.filestore.storage
+package com.bullhorn.filestore.fs.nio
 
 import java.io.File
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import java.nio.file.StandardOpenOption
-import java.nio.channels.{CompletionHandler, AsynchronousFileChannel}
-import scala.util.{Failure, Success}
 import java.nio.ByteBuffer
-import collection.JavaConverters._
+import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
+import java.nio.file.StandardOpenOption
+
+import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.{Failure, Success}
 
 
 /**

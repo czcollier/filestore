@@ -1,4 +1,4 @@
-package com.bullhorn.filestore.storage
+package com.bullhorn.filestore.fs
 
 import scala.concurrent.Future
 

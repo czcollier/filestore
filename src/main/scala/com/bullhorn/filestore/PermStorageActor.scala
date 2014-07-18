@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, Props}
 import akka.pattern.pipe
 import com.bullhorn.filestore.FileDbActor.{DuplicateFile, StorableFile}
 import com.bullhorn.filestore.PermStorageActor.{FileStored, FileWithSignature}
-import com.bullhorn.filestore.storage.FileStore
+import com.bullhorn.filestore.fs.FileStore
 
 object PermStorageActor {
   case class FileStored(name: String)
@@ -16,7 +16,7 @@ class PermStorageActor(
         store: FileStore)
     extends Actor with ActorLogging {
 
-  val dbActor = context.actorOf(FileDbActor(ResourcesStuff.db))
+  val dbActor = context.actorOf(FileDbActor(ResourcesFoo.db))
 
   implicit val ec = context.dispatcher
 

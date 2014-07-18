@@ -1,4 +1,4 @@
-package com.bullhorn.filestore.storage
+package com.bullhorn.filestore.fs
 
 import com.bullhorn.filestore.Config
 import com.bullhorn.filestore.db.FileDb

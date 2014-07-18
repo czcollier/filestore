@@ -8,7 +8,7 @@ import JsonCodec.StoredFile
 import com.bullhorn.filestore.PermStorageActor.FileStored
 import com.bullhorn.filestore.StorageCoordinatorActor.{FileChunk, FileSignature}
 import SuspendingQueue.AckConsumed
-import com.bullhorn.filestore.storage.FileStore
+import com.bullhorn.filestore.fs.FileStore
 import com.google.common.base.Stopwatch
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
