@@ -26,11 +26,13 @@ object Build extends sbt.Build {
         ++ Seq(
       version           := "0.1.0",
       resolvers         ++= Seq(
-        Repositories.sprayNightlies
+        Repositories.sprayNightlies,
+        Repositories.typesafe
       ),
       libraryDependencies ++= Seq(
         Libraries.akkaActor,
         Libraries.akkaAgent,
+        Libraries.shifterCore,
         Libraries.berkeleydb,
         Libraries.scalaIOCore,
         Libraries.scalaIOFile,

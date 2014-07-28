@@ -12,6 +12,9 @@ object Favorites {
     val novus           = "Novus Releases"        at "http://repo.novus.com/releases"
     val gamlor          = "Gamlor-Repo"           at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
 
+    val bionicSpirit    = "BionicSpirit Releases" at "http://maven.bionicspirit.com/releases/"
+    val bionicSpiritRel = "BionicSpirit Snapshots" at "http://maven.bionicspirit.com/snapshots/"
+
     val bullhornPrivate = "Bullhorn Private Repository" at bullhornProxyRepositoryUrl + "/libs-release"
 
 
@@ -47,7 +50,8 @@ object Favorites {
 
     val scalaIOCore     = "com.github.scala-incubator.io" %% "scala-io-core"   % "0.4.3"
     val scalaIOFile     = "com.github.scala-incubator.io" %% "scala-io-file"   % "0.4.3"
-    val gamlorAsyncIO   = "info.gamlor.akkaasync"  %% "akka-io" % "1.0-SNAPSHOT"
+    val gamlorAsyncIO   = "info.gamlor.akkaasync"         %% "akka-io"         % "1.0-SNAPSHOT"
+    val shifterCore     = "shifter"                       %% "shifter-core"    % "0.5.5-SNAPSHOT"
 
     // akka
     val akkaActor       = "com.typesafe.akka"         %% "akka-actor"          % Versions.akka          % "compile"
