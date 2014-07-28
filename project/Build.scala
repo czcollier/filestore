@@ -27,7 +27,8 @@ object Build extends sbt.Build {
       version           := "0.1.0",
       resolvers         ++= Seq(
         Repositories.sprayNightlies,
-        Repositories.typesafe
+        Repositories.typesafe,
+        Repositories.bionicSpiritSnap
       ),
       libraryDependencies ++= Seq(
         Libraries.akkaActor,

@@ -4,16 +4,16 @@ object Favorites {
   val bullhornProxyRepositoryUrl = "http://dev-fs.bh-bos2.bullhorn.com:8081/artifactory"
   
   object Repositories {
-    val typesafe        = "Typesafe repo"         at "http://repo.typesafe.com/typesafe/releases"
-    val scalaTools      = "Scala Tools Releases"  at "https://oss.sonatype.org/content/groups/scala-tools"
-    val scalaToolsSnaps = "Scala Tools Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-    val spray           = "spray repo"            at "http://repo.spray.io"
-    val sprayNightlies  = "spray nightlies"       at "http://nightlies.spray.io"
-    val novus           = "Novus Releases"        at "http://repo.novus.com/releases"
-    val gamlor          = "Gamlor-Repo"           at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
+    val typesafe           = "Typesafe repo"            at "http://repo.typesafe.com/typesafe/releases"
+    val scalaTools         = "Scala Tools Releases"     at "https://oss.sonatype.org/content/groups/scala-tools"
+    val scalaToolsSnaps    = "Scala Tools Snapshots"    at "https://oss.sonatype.org/content/repositories/snapshots"
+    val spray              = "spray repo"               at "http://repo.spray.io"
+    val sprayNightlies     = "spray nightlies"          at "http://nightlies.spray.io"
+    val novus              = "Novus Releases"           at "http://repo.novus.com/releases"
+    val gamlor             = "Gamlor-Repo"              at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
 
-    val bionicSpirit    = "BionicSpirit Releases" at "http://maven.bionicspirit.com/releases/"
-    val bionicSpiritRel = "BionicSpirit Snapshots" at "http://maven.bionicspirit.com/snapshots/"
+    val bionicSpiritRel    = "BionicSpirit Releases"    at "http://maven.bionicspirit.com/releases/"
+    val bionicSpiritSnap   = "BionicSpirit Snapshots"   at "http://maven.bionicspirit.com/snapshots/"
 
     val bullhornPrivate = "Bullhorn Private Repository" at bullhornProxyRepositoryUrl + "/libs-release"
 
@@ -51,7 +51,8 @@ object Favorites {
     val scalaIOCore     = "com.github.scala-incubator.io" %% "scala-io-core"   % "0.4.3"
     val scalaIOFile     = "com.github.scala-incubator.io" %% "scala-io-file"   % "0.4.3"
     val gamlorAsyncIO   = "info.gamlor.akkaasync"         %% "akka-io"         % "1.0-SNAPSHOT"
-    val shifterCore     = "shifter"                       %% "shifter-core"    % "0.5.5-SNAPSHOT"
+    val shifterCore     = "shifter"                       %% "shifter-core"    % "0.5.5-SNAPSHOT" exclude("com.bionicspirit", "scala-atomic_2.10")
+    val monifu          = "org.monifu"                    %% "monifu"          % "0.13.0"
 
     // akka
     val akkaActor       = "com.typesafe.akka"         %% "akka-actor"          % Versions.akka          % "compile"
