@@ -5,7 +5,6 @@ import java.nio.ByteBuffer
 import java.nio.file.StandardOpenOption._
 
 import com.bullhorn.filestore.fs.TempFile
-import shifter.io.AsyncFileChannel
 
 import scala.concurrent.{ExecutionContext, Future}
 

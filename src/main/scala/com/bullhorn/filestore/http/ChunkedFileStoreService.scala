@@ -1,7 +1,6 @@
 package com.bullhorn.filestore.http
 
 import akka.actor._
-import akka.util.Timeout
 import SuspendingQueue.AckConsumed
 import com.bullhorn.filestore.{Resources, FileHandlerActor}
 import spray.can.Http
@@ -9,11 +8,10 @@ import spray.can.Http.RegisterChunkHandler
 import spray.http.HttpMethods._
 import spray.http._
 
-import scala.concurrent.duration._
-
+/**
+ * The front-line Spray HTTP handler for the filestore service.
+ */
 class ChunkedFileStoreService extends Actor with ActorLogging {
-
-  implicit val timeout: Timeout = 1.second // for the actor 'asks'
 
   def receive = {
     case AckConsumed(bytes) => log.info("%d bytes acked".format(bytes))

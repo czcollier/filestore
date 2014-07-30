@@ -11,7 +11,7 @@ class StdTempFile(val path: String)(implicit ctx: ExecutionContext) extends Temp
   val os = new BufferedOutputStream(new FileOutputStream((path)))
 
   override def write(data: Array[Byte]): Future[Int] = {
-    future {
+    Future {
       os.write(data)
     }.map(x => data.length)
   }

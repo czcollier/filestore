@@ -1,7 +1,6 @@
 package com.bullhorn.filestore
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
-import java.util.concurrent.TimeUnit
 
 import akka.actor._
 import akka.io.{IO, Tcp}
@@ -13,10 +12,8 @@ import spray.http.HttpHeaders.RawHeader
 import spray.http.Uri.Path
 import spray.http._
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.Random
-
 
 object FileStoreClient extends App {
   case object StartTest
@@ -43,7 +40,7 @@ object FileStoreClient extends App {
   implicit val timeout = Timeout(5000 minutes)
 
   val testFiles = new File(testFilesPath).listFiles
-  val testCnt = testFiles.length * 5
+  val testCnt = testFiles.length * 3
 
   println("testing with %d files over %d runs".format(testFiles.length, testCnt))
 

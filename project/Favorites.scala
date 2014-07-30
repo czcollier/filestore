@@ -1,8 +1,6 @@
 import sbt._
 
 object Favorites {
-  val bullhornProxyRepositoryUrl = "http://dev-fs.bh-bos2.bullhorn.com:8081/artifactory"
-  
   object Repositories {
     val typesafe           = "Typesafe repo"            at "http://repo.typesafe.com/typesafe/releases"
     val scalaTools         = "Scala Tools Releases"     at "https://oss.sonatype.org/content/groups/scala-tools"
@@ -11,39 +9,27 @@ object Favorites {
     val sprayNightlies     = "spray nightlies"          at "http://nightlies.spray.io"
     val novus              = "Novus Releases"           at "http://repo.novus.com/releases"
     val gamlor             = "Gamlor-Repo"              at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
-
-    val bionicSpiritRel    = "BionicSpirit Releases"    at "http://maven.bionicspirit.com/releases/"
-    val bionicSpiritSnap   = "BionicSpirit Snapshots"   at "http://maven.bionicspirit.com/snapshots/"
-
-    val bullhornPrivate = "Bullhorn Private Repository" at bullhornProxyRepositoryUrl + "/libs-release"
-
-
-    // bh- repositories are for publishing only in core-services.  Other projects will use them
-    // for resolving Bullhorn libs, but core-services is the source of these
-    val bullhornSnapshots = "Bullhorn Snapshots" at bullhornProxyRepositoryUrl + "/bh-snapshot"
-    val bullhornReleases = "Bullhorn Releases" at bullhornProxyRepositoryUrl + "/bh-release"
   }
 
   object Versions {
-    val akka          = "2.3.0"
+    val akka          = "2.3.4"
     val berkeleydb    = "3.2.76"
     val casbah        = "2.4.1"
     val dispatch      = "0.9.2"
     val guava         = "17.0"
     val jodaTime      = "1.6"
     val lift          = "2.4"
-    val logback       = "1.0.7"
+    val logback       = "1.1.2"
     val reactiveMongo = "0.9"
     val rogue         = "1.1.8"
     val salat         = "1.9.2-SNAPSHOT"
     val scalaTest     = "2.0"
-    val slf4j         = "1.6.4"
-    val specs2        = "1.14"
-    //spray 1.2-Mx are not compatible with Akka 2.2.0
-    //need to use a nightly build for now.
+    val slf4j         = "1.7.7"
+    val specs2        = "2.3.13"
     val spray         = "1.3.1"
-    val sprayJson     = "1.2.5"
+    val sprayJson     = "1.2.6"
     val squeryl       = "0.9.5-2"
+    val sprayFunnel   = "1.0-RC4-spray1.3"
   }
 
   object Libraries {
@@ -51,8 +37,6 @@ object Favorites {
     val scalaIOCore     = "com.github.scala-incubator.io" %% "scala-io-core"   % "0.4.3"
     val scalaIOFile     = "com.github.scala-incubator.io" %% "scala-io-file"   % "0.4.3"
     val gamlorAsyncIO   = "info.gamlor.akkaasync"         %% "akka-io"         % "1.0-SNAPSHOT"
-    val shifterCore     = "shifter"                       %% "shifter-core"    % "0.5.5-SNAPSHOT" exclude("com.bionicspirit", "scala-atomic_2.10")
-    val monifu          = "org.monifu"                    %% "monifu"          % "0.13.0"
 
     // akka
     val akkaActor       = "com.typesafe.akka"         %% "akka-actor"          % Versions.akka          % "compile"
@@ -61,11 +45,11 @@ object Favorites {
     val akkaRemote      = "com.typesafe.akka"         %% "akka-remote"         % Versions.akka
 
     // spray
-    val sprayCan        = "io.spray"                  %  "spray-can"           % Versions.spray         % "compile"
-    val sprayRouting    = "io.spray"                  %  "spray-routing"       % Versions.spray         % "compile"
-    val sprayCaching    = "io.spray"                  %  "spray-caching"       % Versions.spray         % "compile"
-    val sprayClient     = "io.spray"                  %  "spray-client"        % Versions.spray         % "compile"
-    val sprayJson       = "io.spray"                  %% "spray-json"          % Versions.sprayJson     % "compile"
+    val sprayCan        = "io.spray"                  %%  "spray-can"           % Versions.spray         % "compile"
+    val sprayRouting    = "io.spray"                  %%  "spray-routing"       % Versions.spray         % "compile"
+    val sprayCaching    = "io.spray"                  %%  "spray-caching"       % Versions.spray         % "compile"
+    val sprayClient     = "io.spray"                  %%  "spray-client"        % Versions.spray         % "compile"
+    val sprayJson       = "io.spray"                  %% "spray-json"           % Versions.sprayJson     % "compile"
 
     // MongoDB access
     val casbah          = "org.mongodb"               %% "casbah"              % Versions.casbah        % "compile"
@@ -92,13 +76,6 @@ object Favorites {
     val slf4j           = "org.slf4j"                 %  "slf4j-api"           % Versions.slf4j
     val logback         = "ch.qos.logback"            %  "logback-classic"     % Versions.logback
     
-    // bullhorn
-    val bhEntity        = "com.bullhorn"              %  "entity"              % "0.1"                 % "compile"
-    val bhDaytona       = "com.bullhorn"              %  "daytona"             % "0.1"                 % "compile"
-    val bhDataService   = "com.bullhorn"              %  "data-service"        % "2.5"                 % "compile"
-    val bhStaffing      = "com.bullhorn"              %  "staffing"            % "0.1"                 % "compile"
-    val bhRest          = "com.bullhorn"              %  "rest"                % "0.1"                 % "compile"
-
     // testing
     val akkaTestKit     = "com.typesafe.akka"         %% "akka-testkit"        % Versions.akka          % "test"
     val scalaTest       = "org.scalatest"             %% "scalatest"           % Versions.scalaTest     % "test"

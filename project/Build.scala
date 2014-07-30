@@ -6,37 +6,36 @@ import spray.revolver.RevolverPlugin._
 import com.github.retronym.SbtOneJar._
 //import com.typesafe.sbt.SbtAtmos._
 
+import net.virtualvoid.sbt.graph.Plugin.graphSettings
+
 object Build extends sbt.Build {
 
   def standardSettings = Seq(
     organization      := "bullhorn",
-    scalaVersion      := "2.10.3",
+    scalaVersion      := "2.11.2",
     scalacOptions     := Seq("-deprecation", "-encoding", "utf8"),
     artifact in oneJar <<= moduleName(Artifact(_, "dist")),
     exportJars    := true
-  ) ++ Defaults.defaultSettings ++ Seq(oneJarSettings: _*)
+  ) ++ Seq(oneJarSettings: _*)
 
 
   lazy val filestore = Project(
     id = "filestore",
     base = file("."),
     settings = standardSettings
+        ++ graphSettings
         ++ Seq(Revolver.settings: _*)
         //++ Seq(atmosSettings: _*)
         ++ Seq(
       version           := "0.1.0",
       resolvers         ++= Seq(
-        Repositories.sprayNightlies,
         Repositories.typesafe,
-        Repositories.bionicSpiritSnap
+        Repositories.spray
       ),
       libraryDependencies ++= Seq(
         Libraries.akkaActor,
         Libraries.akkaAgent,
-        Libraries.shifterCore,
         Libraries.berkeleydb,
-        Libraries.scalaIOCore,
-        Libraries.scalaIOFile,
         Libraries.guava,
         Libraries.sprayCan,
         Libraries.sprayRouting,
@@ -60,7 +59,7 @@ object Build extends sbt.Build {
         ++ Seq(
       version           := "0.1.0",
       resolvers         ++= Seq(
-        Repositories.sprayNightlies
+        Repositories.spray
       ),
       libraryDependencies ++= Seq(
         Libraries.akkaActor,
