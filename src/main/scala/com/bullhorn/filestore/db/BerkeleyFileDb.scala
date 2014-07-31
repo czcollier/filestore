@@ -20,8 +20,8 @@ class BerkeleyFileDb extends FileDb {
 
   val config = ConfigFactory.load()
 
-  val baseDir = config.getString("com.bullhorn.filestore.store.basedir")
-  val tmpDir = config.getString("com.bullhorn.filestore.store.tempdir")
+  def baseDir = config.getString("com.bullhorn.filestore.store.basedir")
+  def tmpDir = config.getString("com.bullhorn.filestore.store.tempdir")
 
   val envConfig = EnvironmentConfig.DEFAULT
   envConfig.setAllowCreate(true)
@@ -35,12 +35,8 @@ class BerkeleyFileDb extends FileDb {
   storeConfig.setTransactional(true)
   val store = new EntityStore(env, "files", storeConfig)
 
-  val primaryIndex = store.getPrimaryIndex(classOf[java.lang.Long], classOf[BdbFileRecord])
-  val keyIndex = store.getSecondaryIndex(primaryIndex, classOf[String], "signature")
-
-  store.setSequenceConfig("pk", SequenceConfig.DEFAULT)
-  store.getSequenceConfig("pk").setAllowCreate(true)
-  val primarySequence = store.getSequence("pk")
+  val primaryIndex = store.getPrimaryIndex(classOf[String], classOf[BdbFileRecord])
+  val keyIndex = store.getSecondaryIndex(primaryIndex, classOf[String], "key")
 
   store.setSequenceConfig("tmp", SequenceConfig.DEFAULT)
   store.getSequenceConfig("tmp").setAllowCreate(true)
@@ -55,31 +51,27 @@ class BerkeleyFileDb extends FileDb {
     UUID.nameUUIDFromBytes(buf.array).toString
   }
 
-  def getByID(id: Long) = Option(primaryIndex.get(id))
+  def getByID(id: String) = Option(keyIndex.get(id))
 
   def getBySignature(sig: String): Option[FileRecord] = {
-    val rec = keyIndex.get(sig)
+    val rec = primaryIndex.get(sig)
     Option(rec)
   }
 
-  private val writeLock = new Object()
+  //private val writeLock = new Object()
 
-  def finish(sig: String): Option[Long] = {
+  def finish(sig: String): Option[String] = {
     val timer = Stopwatch.createStarted
     //Why do I need to synchronize here?  I thought BDB transactions
     //combinded with RMW lock mode would sequence all reads and writes
     //but if I do not synchronize here, I get a race condition whereby
     //duplicate keyIndex values are generated.
-    writeLock.synchronized {
       val txn = env.beginTransaction(null, null)
       try {
-        val ret = Option(keyIndex.get(txn, sig, LockMode.RMW)) match {
-          case Some(f) => None
-          case None => {
-            val rec = new BdbFileRecord(sig)
-            primaryIndex.put(txn, rec)
-            Some(rec.id)
-          }
+        val key = UUID.randomUUID().toString
+        val ret = primaryIndex.putNoOverwrite(txn, new BdbFileRecord(sig, key)) match {
+          case true => Some(key)
+          case false => None
         }
         txn.commit()
         log.debug("finish took: %s".format(timer))
@@ -92,22 +84,20 @@ class BerkeleyFileDb extends FileDb {
       }
     }
   }
-}
 
 object BerkeleyFileDb {
   lazy val log = LoggerFactory.getLogger(classOf[BerkeleyFileDb])
 
   @Entity
-  class BdbFileRecord(idParm: Long, sigParm: String) extends FileRecord {
-    @PrimaryKey(sequence = "pk")
-    val id: Long = idParm
-
-    @SecondaryKey(relate = ONE_TO_ONE)
+  class BdbFileRecord(sigParm: String, keyParm: String) extends FileRecord {
+    @PrimaryKey
     val signature: String = sigParm
 
-    def this() = this(0, null)
+    @SecondaryKey(relate = ONE_TO_ONE)
+    val key: String = keyParm
 
-    def this(sig: String) = this(0, sig)
+    def this() = this(null, null)
+
+    def this(sig: String) = this(null, sig)
   }
-
 }

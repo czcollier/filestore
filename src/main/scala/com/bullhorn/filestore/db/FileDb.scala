@@ -3,8 +3,8 @@ package com.bullhorn.filestore.db
 object FileDb {
 
   trait FileRecord {
-    val id: Long
     val signature: String
+    val key: String
   }
 
   val instance = new BerkeleyFileDb
@@ -15,8 +15,8 @@ trait FileDb {
   import FileDb._
 
   def newTempFileId: String
-  def finish(signature: String): Option[Long]
-  def getByID(id: Long): Option[FileRecord]
+  def finish(signature: String): Option[String]
+  def getByID(id: String): Option[FileRecord]
   def getBySignature(sig: String): Option[FileRecord]
 }
 

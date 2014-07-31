@@ -11,7 +11,7 @@ class StdIOFileStore extends FileStore {
 
   import StdIOFileStore._
 
-  override def moveToPerm(tempName: String, id: Long)(implicit ec: ExecutionContext): Future[String] = {
+  override def moveToPerm(tempName: String, id: String)(implicit ec: ExecutionContext): Future[String] = {
     val permFile = new File(withPermDir(formatPermFileName(id)))
     val tempFile = new File(tempName)
     log.debug("moving temp file %s to permanent location: %s".format(tempFile.getPath, permFile.getPath))

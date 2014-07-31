@@ -12,7 +12,7 @@ class NIOFileStore extends FileStore {
     Future { Files.delete(Paths.get(tempName)) }
   }
 
-  override def moveToPerm(tempName: String, id: Long)(implicit ec: ExecutionContext): Future[String] = {
+  override def moveToPerm(tempName: String, id: String)(implicit ec: ExecutionContext): Future[String] = {
     Future {
       val targetPath = withPermDir(formatPermFileName(id))
       Files.move(Paths.get(tempName), Paths.get(targetPath))

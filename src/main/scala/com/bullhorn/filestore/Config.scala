@@ -7,15 +7,15 @@ object Config {
 
   private def withKeyPrefix(n: String) = s"$KEY_PREFIX.$n"
 
-  val config = ConfigFactory.load()
+  lazy val config = ConfigFactory.load()
 
   object FileStore {
-    val baseDir = config.getString(withKeyPrefix("store.basedir"))
-    val tmpDir = config.getString(withKeyPrefix("store.tempdir"))
+    def baseDir = config.getString(withKeyPrefix("store.basedir"))
+    def tmpDir = config.getString(withKeyPrefix("store.tempdir"))
   }
 
   object SuspendingQueue {
-    val suspendThreshold = config.getInt(withKeyPrefix("suspendingQueue.suspendThreshold"))
-    val resumeThreshold = config.getInt(withKeyPrefix("suspendingQueue.resumeThreshold"))
+    def suspendThreshold = config.getInt(withKeyPrefix("suspendingQueue.suspendThreshold"))
+    def resumeThreshold = config.getInt(withKeyPrefix("suspendingQueue.resumeThreshold"))
   }
 }

@@ -14,6 +14,7 @@ import spray.http._
 
 import scala.concurrent.duration._
 import scala.util.Random
+import com.bullhorn.filestore.Throttler.{SetTarget, RateInt}
 
 object FileStoreClient extends App {
   case object StartTest
@@ -45,13 +46,16 @@ object FileStoreClient extends App {
   println("testing with %d files over %d runs".format(testFiles.length, testCnt))
 
   val coordinator = system.actorOf(Props[StoreFileCoordinator])
+  val throttler = system.actorOf(Props(classOf[TimerBasedThrottler], 15 msgsPer 500.milliseconds))
+  throttler ! SetTarget(Some(coordinator))
+
   val tests = Stream.continually(Random.nextInt(testFiles.length)).take(testCnt)
   val totalTimer = Stopwatch.createStarted
 
   tests.zipWithIndex foreach { zi =>
       val stream = new BufferedInputStream(new FileInputStream(testFiles(zi._1)))
       println("sending: %s".format(zi._2))
-      (coordinator ? StoreFile(stream, s"${zi._2}", System.currentTimeMillis))
+      (throttler ? StoreFile(stream, s"${zi._2}", System.currentTimeMillis))
         .mapTo[(Int, Int, Int, Long)]
         .map(x => println(x.toString))
   }
@@ -74,7 +78,6 @@ object FileStoreClient extends App {
     def doneCount = successCount + failCount
 
     private def handleResponse(r: StoreFileResult): (Int, Int, Int) = {
-      successCount += 1
       r match {
         case StoreFileSuccess(info, size) => {
           successCount += 1
@@ -151,20 +154,19 @@ object FileStoreClient extends App {
       case AckChunk => nextChunk(sender)
       case response@HttpResponse(status, entity, _, _) =>
         val server = sender
-        //log.info("sent file #%s of %d bytes in %s".format(cnt.get, bSent, timer.stop))
         client ! StoreFileSuccess(entity.asString, bSent)
         server ! Http.Close
       case Http.Closed =>
         log.debug("connection for %s closed".format(cnt.get))
-        //context.stop(self)
+        context.system.stop(self)
 
       case Tcp.ErrorClosed(reason) =>
         log.error("ERROR: %s".format(reason))
         client ! StoreFileError(reason)
-        //context.stop(self)
+        context.stop(self)
       case x =>
         println("OOPS! ====> received unhandled message: %s".format(x.toString))
-        //context.stop(self)
+        context.stop(self)
     }
 
     override def postStop() {
