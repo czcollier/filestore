@@ -4,3 +4,9 @@
 .ensime_lucene/
 target
 project/project
+.vscode/
+.bloop/
+.bsp/
+.metals/
+.scala-build/
+project/metals.sbt 

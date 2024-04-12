@@ -1,11 +1,13 @@
 import sbt._
-
+import sbt.librarymanagement.URLRepository
+import sbt.librarymanagement.MavenRepository
 object Favorites {
+  def unsafe(repo: MavenRepository) = repo.withAllowInsecureProtocol(true)
   object Repositories {
-    val typesafe           = "Typesafe repo"            at "http://repo.typesafe.com/typesafe/releases"
+    val typesafe           = unsafe("Typesafe repo"            at "http://repo.typesafe.com/typesafe/releases")
     val scalaTools         = "Scala Tools Releases"     at "https://oss.sonatype.org/content/groups/scala-tools"
     val scalaToolsSnaps    = "Scala Tools Snapshots"    at "https://oss.sonatype.org/content/repositories/snapshots"
-    val spray              = "spray repo"               at "http://repo.spray.io"
+    val spray              = ("spray repo"               at "http://repo.spray.io").withAllowInsecureProtocol(true)
     val sprayNightlies     = "spray nightlies"          at "http://nightlies.spray.io"
     val novus              = "Novus Releases"           at "http://repo.novus.com/releases"
     val gamlor             = "Gamlor-Repo"              at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
