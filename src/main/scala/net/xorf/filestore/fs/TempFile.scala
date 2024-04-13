@@ -2,6 +2,7 @@ package net.xorf.filestore.fs
 
 import scala.concurrent.Future
 
+
 trait TempFile {
   val path: String
 

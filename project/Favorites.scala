@@ -4,17 +4,19 @@ import sbt.librarymanagement.MavenRepository
 object Favorites {
   def unsafe(repo: MavenRepository) = repo.withAllowInsecureProtocol(true)
   object Repositories {
-    val typesafe           = unsafe("Typesafe repo"            at "http://repo.typesafe.com/typesafe/releases")
+    val akka               = "Akka library repository"  at "https://repo.akka.io/maven"
+    val typesafe           = unsafe("Typesafe repo"     at "http://repo.typesafe.com/typesafe/releases")
     val scalaTools         = "Scala Tools Releases"     at "https://oss.sonatype.org/content/groups/scala-tools"
     val scalaToolsSnaps    = "Scala Tools Snapshots"    at "https://oss.sonatype.org/content/repositories/snapshots"
-    val spray              = ("spray repo"               at "http://repo.spray.io").withAllowInsecureProtocol(true)
+    val spray              = ("spray repo"              at "http://repo.spray.io").withAllowInsecureProtocol(true)
     val sprayNightlies     = "spray nightlies"          at "http://nightlies.spray.io"
     val novus              = "Novus Releases"           at "http://repo.novus.com/releases"
     val gamlor             = "Gamlor-Repo"              at "https://github.com/gamlerhart/gamlor-mvn/raw/master/snapshots"
   }
 
   object Versions {
-    val akka          = "2.3.4"
+    val akka          = "2.9.2"
+    val akkaHttp      = "10.6.1"
     val berkeleydb    = "3.2.76"
     val casbah        = "2.4.1"
     val dispatch      = "0.9.2"
@@ -45,13 +47,15 @@ object Favorites {
     val akkaAgent       = "com.typesafe.akka"         %% "akka-agent"          % Versions.akka          % "compile"
     val akkaSlf4j       = "com.typesafe.akka"         %% "akka-slf4j"          % Versions.akka
     val akkaRemote      = "com.typesafe.akka"         %% "akka-remote"         % Versions.akka
+    val akkaHttp        = "com.typesafe.akka"         %% "akka-http"           % Versions.akkaHttp
+    val akkaHttpCore    = "com.typesafe.akka"         %% "akka-http-core"      % Versions.akkaHttp
 
     // spray
-    val sprayCan        = "io.spray"                  %%  "spray-can"           % Versions.spray         % "compile"
-    val sprayRouting    = "io.spray"                  %%  "spray-routing"       % Versions.spray         % "compile"
-    val sprayCaching    = "io.spray"                  %%  "spray-caching"       % Versions.spray         % "compile"
-    val sprayClient     = "io.spray"                  %%  "spray-client"        % Versions.spray         % "compile"
-    val sprayJson       = "io.spray"                  %% "spray-json"           % Versions.sprayJson     % "compile"
+    //val sprayCan        = "io.spray"                  %%  "spray-can"           % Versions.spray         % "compile"
+    //val sprayRouting    = "io.spray"                  %%  "spray-routing"       % Versions.spray         % "compile"
+    //val sprayCaching    = "io.spray"                  %%  "spray-caching"       % Versions.spray         % "compile"
+    //val sprayClient     = "io.spray"                  %%  "spray-client"        % Versions.spray         % "compile"
+    //val sprayJson       = "io.spray"                  %% "spray-json"           % Versions.sprayJson     % "compile"
 
     // MongoDB access
     val casbah          = "org.mongodb"               %% "casbah"              % Versions.casbah        % "compile"

@@ -8,6 +8,8 @@ import net.xorf.filestore.fs.FileStore
 
 import scala.concurrent.ExecutionContext
 
+import scala.util.{Success, Failure}
+
 object TempStorageActor {
   case class WriteDone(len: Int)
   def apply(store: FileStore) = Props(new TempStorageActor(store))
@@ -21,12 +23,17 @@ class TempStorageActor(store: FileStore) extends Actor with ActorLogging with St
   def receive = {
     case FileChunk(bytes) => {
       context.become({
-        case WriteDone(l) => context.unbecome(); unstashAll()
+        case WriteDone(l) =>
+          log.info("-----------> GOTS: %s".format(l.toString))
+          context.unbecome();
+          unstashAll()
         case msg => stash()
       })
-      tempFile.write(bytes).map { l =>
-        log.debug("wrote %d bytes to temp file %s".format(l, tempFile.path))
-        self ! WriteDone(l)
+      tempFile.write(bytes).andThen {
+        case Success(r) => self ! WriteDone(r)
+        case Failure(f) => self ! Status.Failure(f)
+        //log.debug("wrote %d bytes to temp file %s".format(l, tempFile.path))
+        //self ! WriteDone(l)
       }
     }
     case WriteDone(l) => {
@@ -34,7 +41,6 @@ class TempStorageActor(store: FileStore) extends Actor with ActorLogging with St
     }
     case FileSignature(fileSig) =>
       val client = sender
-      tempFile.close()
       client ! FileWithSignature(fileSig, tempFile.path)
       context.stop(self)
   }
