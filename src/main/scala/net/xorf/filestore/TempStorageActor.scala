@@ -7,6 +7,7 @@ import net.xorf.filestore.TempStorageActor.WriteDone
 import net.xorf.filestore.fs.FileStore
 
 import scala.concurrent.ExecutionContext
+ import akka.pattern.pipe
 
 object TempStorageActor {
   case class WriteDone(len: Int)
@@ -21,21 +22,27 @@ class TempStorageActor(store: FileStore) extends Actor with ActorLogging with St
   def receive = {
     case FileChunk(bytes) => {
       context.become({
-        case WriteDone(l) => context.unbecome(); unstashAll()
+        case WriteDone(l) => 
+          log.info("-----------> Write Done: %s".format(l.toString))
+          context.unbecome(); unstashAll()
         case msg => stash()
       })
-      tempFile.write(bytes).map { l =>
-        log.debug("wrote %d bytes to temp file %s".format(l, tempFile.path))
-        self ! WriteDone(l)
-      }
+      
+      tempFile.write(bytes).map(b => WriteDone(b)).pipeTo(self)
+      
+      //  { l =>
+      //   log.debug("wrote %d bytes to temp file %s".format(l, tempFile.path))
+      //   self ! WriteDone(l)
+      // }
     }
     case WriteDone(l) => {
       log.info("-----------> GOT: %s".format(l.toString))
     }
     case FileSignature(fileSig) =>
+      log.info("file info: %s  --- %s".format(fileSig, tempFile.path))
       val client = sender
-      tempFile.close()
       client ! FileWithSignature(fileSig, tempFile.path)
-      context.stop(self)
+      tempFile.close()
+      //context.stop(self)
   }
 }

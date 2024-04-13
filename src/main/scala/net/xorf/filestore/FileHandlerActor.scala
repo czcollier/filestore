@@ -55,9 +55,11 @@ import scala.language.implicitConversions
       client ! AckConsumed(fChunk.bytes.length)
     }
     case e: ChunkedMessageEnd =>
+      log.info("got ChunkedMessageEnd: %s -- %s".format(self.toString(), e.toString()))
       val client = sender
       context.actorOf(Props(new Actor() {
         var sig: Option[FileSignature] = None
+        log.info("I am a new file stored actor: %s".format(self.toString()))
 
         digestActor ! GetDigest
         def receive = {

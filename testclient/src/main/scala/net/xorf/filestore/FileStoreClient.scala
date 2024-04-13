@@ -106,7 +106,7 @@ object FileStoreClient extends App {
           if (context != null)
             system.scheduler.scheduleOnce(3 seconds) {
               log.info("rate low; stopping...")
-              system.shutdown()
+              system.terminate()
             }
         }
         lastCount = doneCount

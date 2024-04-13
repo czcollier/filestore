@@ -24,6 +24,7 @@ class StorageCoordinatorActor(store: FileStore) extends Actor with ActorLogging 
         tempStorageActor ! s
         def receive = {
           case fws: FileWithSignature =>
+            log.debug("Coordinator Got: %s".format(fws))
             permStorageActor ! fws
           case fs: FileStored =>
             origSender ! fs

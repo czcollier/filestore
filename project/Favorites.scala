@@ -14,7 +14,7 @@ object Favorites {
   }
 
   object Versions {
-    val akka          = "2.3.4"
+    val akka          = "2.5.20"
     val berkeleydb    = "3.2.76"
     val casbah        = "2.4.1"
     val dispatch      = "0.9.2"

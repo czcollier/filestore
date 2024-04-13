@@ -21,6 +21,9 @@ class ChunkedFileStoreService extends Actor with ActorLogging {
     case HttpRequest(GET, Uri.Path("/ping"), _, _, _) =>
       sender ! HttpResponse(entity = "PONG!")
 
+    case HttpRequest(GET, Uri.Path("/shutdown"), _, _, _) =>
+      context.system.terminate()
+
     case r@HttpRequest(POST, Uri.Path("/file-upload"), headers, entity: HttpEntity.NonEmpty, protocol) =>
       val client = sender
       // emulate chunked behavior for POST requests to this path

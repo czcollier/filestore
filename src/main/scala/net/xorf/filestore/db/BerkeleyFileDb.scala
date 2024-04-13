@@ -29,7 +29,7 @@ class BerkeleyFileDb extends FileDb {
   envConfig.setTxnSerializableIsolation(true)
 
   val env = new Environment(new File("%s/db".format(baseDir)), envConfig)
-
+ 
   val storeConfig = StoreConfig.DEFAULT
   storeConfig.setAllowCreate(true)
   storeConfig.setTransactional(true)
@@ -41,7 +41,6 @@ class BerkeleyFileDb extends FileDb {
   store.setSequenceConfig("tmp", SequenceConfig.DEFAULT)
   store.getSequenceConfig("tmp").setAllowCreate(true)
   val tmpSequence = store.getSequence("tmp")
-
 
   def newTempFileId: String = UUIDFromLong(tmpSequence.get(null, 1))
 
